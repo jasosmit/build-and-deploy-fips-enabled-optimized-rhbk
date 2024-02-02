@@ -1,5 +1,7 @@
 ---
 ### Image build optional variables
+registry_host_fqdn: 'localhost'
+local_repository: 'openshift4'
 rhbk_image_name: 'fips-rhbk-keycloak-rhel9'
 rhbk_ks_image_name: 'fips-rhbk-bcfkskeystore-rhel9'
 rhbk_image_containerfile: 'context/Containerfile'

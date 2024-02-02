@@ -16,10 +16,9 @@
       ignore_errors: yes
       register: existing_session
 
-    - name: '{{ ansible_name_module }} | import_tasks | Conditional import of ocp-cluster-login role'
-      ansible.builtin.import_tasks: ../roles/ocp-cluster-login/tasks/main.yml
-      when:
-        - existing_session.rc > 0
+    - name: '{{ ansible_name_module }} | import_role | OCP cluster login'
+      import_role:
+        name: ocp-cluster-login
 
     - name: '{{ ansible_name_module }} | ansible.builtin.shell:{{ openshift_cli }} get | get RHBK subscription cr'
       ansible.builtin.shell: >

@@ -111,7 +111,7 @@ Plays and Role Variables
       pkg_suffix: suffix to append to the package name
       pkg_extention: package name extension
 - rhbk_ns: namespace the keycloak instance and operators and being deployed into
-- registry_authfile: the authfile for the registry where the optimized keycloaj instance is comes from
+- registry_authfile: the authfile for the registry where the optimized keycloak instance is comes from
 - deploy_pgsql: whether to deploy a postgresql DB statefulset. Only used for testing
 - rhbk_db_secret_name: name of the secret holding postgresql credentials
 - rhbk_db_svc_name: service name for the keycloak DB if deployed as a service
