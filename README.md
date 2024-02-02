@@ -17,7 +17,7 @@ Role Name
 
 A utility role to help build and deploy an optimized Red Hat Build of Keycloak (RHBK) to be deployed via the rhbk-operator to an OpenShift Container Platform 4.+ (OCP4). 
 
-The main focus for this role is twofolds like stated above: build an optimized image that is strict FIPS compliant and enable an easy deployment of the resulting instance based on a provided jinja2 template. 
+The main focus for this role is two folds like stated above: build an optimized image that is strict FIPS compliant and enable an easy deployment of the resulting instance based on a provided jinja2 template. 
 
 The container build process allows for the addition of custom themes or additional libraries (e.g. extra providers to be deployed ...). 
 
@@ -28,14 +28,14 @@ The reason for the second focus (deployment of the keycloak instance) is to make
 Therefore this role contains two playbooks focus on each of the main tasks: building an optimized container image and deploying the resulting keycloak instance. 
 
 ### RHBK Optimized FIPS image build
-The playbook (build-optimized-rhbk-container-image.yml) and associated files allow us to build a new version of the RHBK image when a new version of the base imageis available from Red hat or whenever an update is needed (e.g. new package is required, new binaries need to be included ...). 
+The playbook (build-optimized-rhbk-container-image.yml) and associated files allow us to build a new version of the RHBK image when a new version of the base image is available from Red Hat or whenever an update is needed (e.g. new package is required, new binaries need to be included ...). 
 
 This playbook is used to build, tag and push two container images into the target registry. The first image is the optimized RHBK image that will be ready to support strict mode FIPS but also any additional extensions if applicable. The second image is a helper image to help create BCFKS formatted keystore and trustore from scratch using pem certificate, key and intermediate CA certificate or convert an existing JKS keystore/truststore into a BCFKS keystore/truststore. 
 Note that nothing else is required for the two images to be created and pushed to the target registry except when necessary to change the base image used.  
 
-Before running this playbook you will need the extensions either already staged or you will need to the download_extensions boolean to true to have the playbook download the extensions for you. 
+Before running this playbook you will need the extensions either already staged or you will need to set the download_extensions boolean to true to have the playbook download the extensions for you. 
 
-This playbook can only be run on an Internet connected bastion host with access to the location where the extensions are hosted. If not please ensure you can download the exisiting extensions from the binary repository (e.g. artifactory) and stage them appropriately (the extension binaries are expected under context/_build/extensions directory). 
+This playbook can only be run on an Internet connected bastion/jumphost host with access to the location where the extensions are hosted. If not please ensure you can download the existing extensions from the binary repository (e.g. artifactory) and stage them appropriately (the extension binaries are expected under context/_build/extensions directory). 
 
 Once the extensions have been staged or you have updated the rhbkbuild.yml variable file to ensure that the extensions will be downloaded, you need to make sure that you also update any necessary artifacts. For example if additional changes are required to the java.security file included under the context/_build directory to reflect your intent.
  
@@ -51,7 +51,7 @@ ansible-playbook --ask-vault-pass -v -e download_extensions=false -e rhbk_image_
 
 ### RHBK Instance deployment 
 The second playbook deploy-and-configure-rhbk-keycloak.yml is used to deploy the optimized image. 
-This playbook has blocks of tasks to help with the various aspects of succesfully deploying a keycloak instance. For instance if this is for a test deployment, there is a toggle to enable the deployment of postgresql statefulset to use as the required database. Note that for production deployments this database should not be used. There are also blocks to help create keystores and truststores as well as create associated secrets and configmap if necessary, all driven by toggle booleans. There is also tasks to import realms into the deployed instance of keycloak either during startup (when running in dev mode) or post container creation. 
+This playbook has blocks of tasks to help with the various aspects of succesfully deploying a keycloak instance. For instance if this is for a test deployment, there is a toggle to enable the deployment of postgresql statefulset to use as the required database. Note that for production deployments this database should not be used. There are also blocks to help create keystores and truststores as well as create associated secrets and configmap if necessary, all driven by toggle booleans. There are also tasks to import realms into the deployed instance of keycloak either during startup (when running in dev mode) or post container creation. 
 
 Like in the case above ensure that the appropriate variables have been updated to reflect your intent.
 
@@ -67,7 +67,7 @@ Requirements
 ------------
 A running OpenShift 4 cluster with the rhbk-operator already deployed and with valid credentials provided through the variables described below.
 A running target registry with valid credentials provided through the variables described below.
-An optional RHEL 8 Internet connected bastion host with access to the location where the extensions are hosted and access to Red Hat registry if the extensions and images are to be downloaded. If there is no need to download the image or Bouncy Castle java libraries (it is assumed that these are already available on the host of can be pulled down from the target registry) then the controler does not need to be Internet Connnected. Finally the controller is expected to have few packages installed on it like podman, skopeo, jq...It is also expected to be FIPS enabled so that the built optimized image can inherit FIPS from the host it is built on. 
+An optional RHEL 8 Internet connected bastion host with access to the location where the extensions are hosted and access to Red Hat registry if the extensions and images are to be downloaded. If there is no need to download the image or Bouncy Castle java libraries (it is assumed that these are already available on the host or can be pulled down from the target registry) then the controller does not need to be Internet Connnected. Finally the controller is expected to have few packages installed on it like podman, skopeo, jq...It is also expected to be FIPS enabled so that the built optimized image can inherit FIPS from the host it is built on. 
 
 Dependencies
 ------------
