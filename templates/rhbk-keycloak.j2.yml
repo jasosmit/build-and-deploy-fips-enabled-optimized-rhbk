@@ -1,0 +1,170 @@
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: rhsso
+  namespace: {{ rhbk_ns | d('sso-rhbk', true) }}
+  labels:
+    app: sso
+spec:
+  instances: {{ rhbk_instance_count | d('3', true) }}
+  image: {{ rhbk_image | d('docker.artifactory.code.dodiis.mil/openshift4/rhbk/fips-rhbk-keycloak-rhel9', true) }}:{{ rhbk_image_tag | d('latest', true) }}
+  ingress:
+    enabled: true
+    className: openshift-default
+  db:
+    vendor: postgres
+    host: {{ rhbk_db_host_name }}
+    usernameSecret: 
+      name: {{ rhbk_db_secret_name | d('keycloak-db-secret', true) }}
+      key: POSTGRES_USERNAME
+    passwordSecret:
+      name: {{ rhbk_db_secret_name | d('keycloak-db-secret', true) }}
+      key: POSTGRES_PASSWORD
+    database: {{ rhbk_db_name | d('keycloakdb', true) }}
+    port: {{rhbk_db_port | d('5432', true) }}
+    schema: {{rhbk_db_schema | d('public', true) }}
+    poolInitialSize: {{rhbk_db_pool_initial_size | d('30', true) }}
+    poolMinSize: {{rhbk_db_pool_min_size | d('30', true) }}
+    poolMaxSize: {{rhbk_db_pool_max_size | d('30', true) }}
+  http:
+    httpEnabled: true
+    httpPort: 8080
+    httpsPort: 8443
+    httpsProtocols: TLSv1.2
+    httpsCipherSuites: ""
+    httpsClientAuth: required
+    httpsKeyStoreFile: /opt/keycloak/keystore/{{ bcks_file | basename }}
+    httpsKeyStorePassword: "{{ bcks_password }}"
+    httpsKeyStoreType: {{ rhbk_ks_type | d('JKS', true) }}
+    httpsTrustStoreFile: /opt/keycloak/truststore/{{ bcts_file | basename }}
+    httpsTrustStorePassword: "{{ bcts_password }}"
+    httpsTrustStoreType: {{ rhbk_ts_type | d('JKS', true) }}
+  hostname:
+    hostname: {{ rhbk_hostname }}
+    strict: false
+    strictBackchannel: false
+    adminUrl: {{ rhbk_admin_url }}
+  config:
+    configKeystore: /opt/keycloak/keystore/{{ bcks_file | basename }}
+    keystorePassword: "{{ bcks_password }}"
+    keystoreType: {{ rhbk_ts_type | d('JKS', true) }}
+  additionalOptions:
+    - name: spi-connections-http-client-default-connection-pool-size
+      value: '20'
+    - name: log-console-output
+      value: json
+    - name: metrics-enabled
+      value: 'true'
+  features:
+    enabled:
+      - multi-site
+  transaction:
+    xaEnabled: false
+{% if apply_realm_import is defined and apply_realm_import | bool and sso_relamimport_json is defined and sso_relamimport_json != '' and apply_import_on_start is defined and apply_import_on_start | bool %}
+  import:
+    file: /opt/keycloak/data/import/{{ sso_relamimport_json | basename }}
+{% endif %}
+  unsupported:
+    podTemplate:
+      metadata:
+        labels:
+          app: "sso"
+      spec:
+        containers:
+          - env:
+              - name: KC_LOG_LEVEL
+                value: "DEBUG,org.keycloak.common.crypto:TRACE,org.keycloak.crypto:TRACE,org.bouncycastle:TRACE,javax.net.ssl:TRACE"
+              - name: JAVA_OPTS_APPEND 
+                value: >-
+                  -Djavax.net.ssl.keyStore=/opt/keycloak/keystore/{{ bcks_file | basename }}
+                  -Djavax.net.ssl.keyStorePassword={{ bcks_password }}
+                  -Djavax.net.ssl.keyStoreType={{ rhbk_ts_type | d('JKS', true) }}
+                  -Djavax.net.ssl.trustStore=/opt/keycloak/truststore/{{ bcts_file | basename }}
+                  -Djavax.net.ssl.trustStorePassword={{ bcts_password }}
+                  -Djavax.net.ssl.trustStoreType={{ rhbk_ts_type | d('JKS', true) }}
+                  -Djavax.net.ssl.keyStoreProvider=BCFIPS
+                  -Djavax.net.ssl.trustStoreProvider=BCFIPS
+                  -Djava.security.properties=/usr/lib/jvm/jre-17-openjdk/conf/security/java.security
+                  -Djava.class.path=/opt/keycloak/providers/bc-fips-1.0.2.3.jar
+                  -Djavax.net.debug=all
+              - name: KC_OPTS
+                value: >-
+                  -Djavax.net.ssl.keyStore=/opt/keycloak/keystore/{{ bcks_file | basename }}
+                  -Djavax.net.ssl.keyStorePassword={{ bcks_password }}
+                  -Djavax.net.ssl.keyStoreType={{ rhbk_ts_type | d('JKS', true) }}
+                  -Djavax.net.ssl.trustStore=/opt/keycloak/truststore/{{ bcts_file | basename }}
+                  -Djavax.net.ssl.trustStorePassword={{ bcts_password }}
+                  -Djavax.net.ssl.trustStoreType={{ rhbk_ts_type | d('JKS', true) }}
+                  -Djava.security.properties=/usr/lib/jvm/jre-17-openjdk/conf/security/java.security
+                  -Dauth.server.fips.mode=strict
+                  -Dauth.server.suported.keystore.type=BCFKS
+                  -Dauth.server.keystore.types=bcfks
+                  -Dauth.server.supported.rsa.key.sizes=2048,4096
+                  -Djavax.net.ssl.keyStoreProvider=BCFIPS
+                  -Djavax.net.ssl.trustStoreProvider=BCFIPS
+                  -Djavax.net.debug=all
+              - name: 'QUARKUS_THREAD_POOL_MAX_THREADS'
+                value: "66"
+              - name: X509_CA_BUNDLE
+                value: >-
+                  /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+                  /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                  /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+                  /etc/pki/ca-trus:whitet/extracted/openssl/ca-bundle.trust.crt
+              - name: KEYCLOAK_STATISTICS
+                value: all
+{% if config_custom_theme is defined and config_custom_theme | bool %}
+{% if custom_theme_env is defined and custom_theme_env  | length > 0 %}
+              - name: HTTPS_SECRET
+                value: {{ rhbk_ks_secret_name | d('keycloak-keystore', true) }}
+              - name: HTTPS_KEYSTORE
+                value: {{ bcks_file | basename }}
+              - name: HTTPS_PASSWORD
+                value: {{ bcks_password }}
+              - name: DB_VENDOR
+                value: postgres
+              - name: DB_PORT
+                value: '{{rhbk_db_port | d('5432', true) }}'
+{% for ctenv in custom_theme_env %}
+{% if ctenv.name is defined and ctenv.name != '' %}
+              - name: {{ ctenv.name }}
+{% if ctenv.value is defined and ctenv.value != '' %}
+                value: '{{ ctenv.value }}'
+{% else %}
+{% if 'AF_URL' in ctenv.name %}
+                value: {{ rhbk_af_url }}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endif %}
+            resources:
+              requests:
+                cpu: "2"
+                memory: "1250M"
+              limits:
+                cpu: "6"
+                memory: "2250M"
+            volumeMounts:
+              - name: truststore-volume
+                mountPath: /opt/keycloak/truststore/{{ bcts_file | basename }}
+              - name: keystore-volume
+                mountPath: /opt/keycloak/keystore
+{% if apply_realm_import is defined and apply_realm_import | bool and sso_relamimport_json is defined and sso_relamimport_json != '' and apply_import_on_start is defined and apply_import_on_start | bool %}
+              - name: realm-import-volume
+                mountPath: /opt/keycloak/data/import/{{ sso_relamimport_json | basename }}
+                subPath: {{ sso_relamimport_json | basename }}
+{% endif %}
+        volumes:
+          - name: truststore-volume
+            configMap:
+              name: {{ rhbk_ts_cm_name }}
+          - name: keystore-volume
+            secret:
+              secretName: {{ rhbk_ks_secret_name }}
+{% if apply_realm_import is defined and apply_realm_import | bool and sso_relamimport_json is defined and sso_relamimport_json != '' and apply_import_on_start is defined and apply_import_on_start | bool %}
+          - name: realm-import-volume
+            configmap:
+              configmapName: {{ rhbk_realm_import_cm }}
+{% endif %}

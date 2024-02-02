@@ -1,0 +1,5 @@
+securerandom.StrongAlgorithms=PKCS11:SunPKCS11-NSS-FIPS
+keystore.type=bcfks
+fips.keystore.type=bcfks
+fips.provider.7=XMLDSig
+fips.provider.8=SunJGSS

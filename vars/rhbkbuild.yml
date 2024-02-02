@@ -1,0 +1,52 @@
+---
+### Image build optional variables
+rhbk_image_name: 'fips-rhbk-keycloak-rhel9'
+rhbk_ks_image_name: 'fips-rhbk-bcfkskeystore-rhel9'
+rhbk_image_containerfile: 'context/Containerfile'
+rhbk_image_build_context_dir: 'context'
+rhbk_image_build_arg_base_image_name: ''
+rhbk_image_build_arg_image_label_summary_value: ''
+rhbk_image_build_arg_image_label_name_value: ''
+rhbk_image_build_arg_image_label_maintainer_value: ''
+disable_layer_caching: 'false'
+squash_layers: 'false'
+
+### Client download controlling variables
+download_extensions: false
+extensions:
+  bc-fips:
+    url: 'https://downloads.bouncycastle.org/fips-java/'
+    pkg_version: '1.0.2.3'
+    pkg_name: 'bc-fips'
+    pkg_suffix: '.jar'
+    pkg_extention: '.jar'
+  bcpkix-fips:
+    url: 'https://downloads.bouncycastle.org/fips-java/'
+    pkg_version: '1.0.7'
+    pkg_name: 'bcpkix-fips'
+    pkg_suffix: '.jar'
+    pkg_extention: '.jar'
+  bctls-fips:
+    url: 'https://downloads.bouncycastle.org/fips-java/'
+    pkg_version: '1.0.16'
+    pkg_name: 'bctls-fips'
+    pkg_suffix: '.jar'
+    pkg_extention: '.jar'
+  #bcmail-fips:
+  #  url: 'https://downloads.bouncycastle.org/fips-java/'
+  #  pkg_version: '1.0.4'
+  #  pkg_name: 'bcmail-fips'
+  #  pkg_suffix: '.jar'
+  #  pkg_extention: '.jar'
+  #bcjmail-fips:
+  #  url: 'https://downloads.bouncycastle.org/fips-java/'
+  #  pkg_version: '1.0.4'
+  #  pkg_name: 'bcjmail-fips'
+  #  pkg_suffix: '.jar'
+  #  pkg_extention: '.jar'
+  #bcpg-fips:
+  #  url: 'https://downloads.bouncycastle.org/fips-java/'
+  #  pkg_version: '1.0.7.1'
+  #  pkg_name: 'bcpg-fips'
+  #  pkg_suffix: '.jar'
+  #  pkg_extention: '.jar'

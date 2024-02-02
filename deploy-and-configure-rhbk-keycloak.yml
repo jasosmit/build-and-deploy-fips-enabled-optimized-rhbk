@@ -1,0 +1,758 @@
+- name: 'Deploy RHBK keycloak instance | deploy-and-configure-rhbk-keycloak.yml'
+  hosts: localhost
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    module: "Configure RHBK keycloak "
+    ansible_name_module: " Deploy RHBK keycloak instance | {{ module }}"
+    configure_fileintegrity: 'true'
+  vars_files:
+    - 'vars/vault.yml'
+    - 'vars/rhbk.yml'
+
+  pre_tasks:
+    - name: '{{ ansible_name_module }} | {{ openshift_cli }} whoami | check if there is valid session'
+      ansible.builtin.command: >
+        {{ openshift_cli }} whoami
+      ignore_errors: yes
+      register: existing_session
+
+    - name: '{{ ansible_name_module }} | import_tasks | Conditional import of ocp-cluster-login role'
+      ansible.builtin.import_tasks: ../roles/ocp-cluster-login/tasks/main.yml
+      when:
+        - existing_session.rc > 0
+
+    - name: '{{ ansible_name_module }} | ansible.builtin.shell:{{ openshift_cli }} get | get RHBK subscription cr'
+      ansible.builtin.shell: >
+        {{ openshift_cli }} get sub -A --no-headers | grep rhbk | awk '{print $2}' 
+      ignore_errors: true
+      register: rhbk_sub_exists
+
+    - name: '{{ ansible_name_module }} | ansible.builtin.shell:{{ openshift_cli }} get | get RHBK subscription cr namespace'
+      ansible.builtin.shell: >
+        {{ openshift_cli }} get sub -A --no-headers | grep rhbk | awk '{print $1}' 
+      ignore_errors: true
+      register: rhbk_sub_ns
+
+    - name: '{{ ansible_name_module }} | ansible.builtin.shell:{{ openshift_cli }} get | get RHBK namespace'
+      ansible.builtin.shell: >
+        {{ openshift_cli }} get project {{ rhbk_ns }} --no-headers | awk '{print $1}' 
+      ignore_errors: true
+      register: rhbk_ns
+
+    - name: '{{ ansible_name_module }} | assert | Devspace is properly installed'
+      ansible.builtin.assert:
+        that:
+          - rhbk_sub_exists is defined
+          - rhbk_sub_exists.rc is defined
+          - rhbk_sub_exists.rc == 0 
+          - rhbk_sub_exists.stdout is defined
+          - "'rhbk' in rhbk_sub_exists.stdout" 
+        msg: "The RHBK operator is required before running this"
+
+    - name: '{{ ansible_name_module }} | set_fact |  registry authfile '
+      when:
+        - not registry_authfile is defined or registry_authfile == ''
+      block:
+        - name: '{{ ansible_name_module }} | stat | Check if JKS file exist'
+          ansible.builtin.stat:
+            path: "{{ ansible_env.HOME }}/.docker/config.json"
+            get_checksum: false
+          register: registry_authfile_exists
+
+        - name: '{{ ansible_name_module }} | assert | default registry auth file is defined'
+          ansible.builtin.assert:
+            that:
+              - registry_authfile_exists is defined
+              - registry_authfile_exists.stat is defined
+              - registry_authfile_exists.stat.exists is defined
+              - registry_authfile_exists.stat.exists | bool 
+              - registry_authfile_exists.stat.isreg is defined
+              - registry_authfile_exists.stat.isreg | bool 
+            msg: "The regsitry authfile is required before running this"
+
+        - name: '{{ ansible_name_module }} | set_fact |  registry authfile '
+          ansible.builtin.set_fact:
+            registry_authfile: "{{ ansible_env.HOME }}/.docker/config.json"
+
+    - name: '{{ ansible_name_module }} | pip install | install required module'
+      when:
+        - apply_realm_import is defined and apply_realm_import | bool
+        - sso_relamimport_json is defined 
+        - sso_relamimport_json != '' 
+        - not sso_relamimport_yaml is defined or sso_relamimport_yaml == ''
+      block:
+        - name: '{{ ansible_name_module }} | command:which | Check if yq is installed'
+          ansible.builtin.shell: >
+            which yq 
+          ignore_errors: yes
+          register: yq_binary
+
+        - name: '{{ ansible_name_module }} | ansible.builtin.debug }} | Print yq_binary output' 
+          ansible.builtin.debug:
+            var: yq_binary
+            verbosity: 2
+
+        - name: '{{ ansible_name_module }} | pip install | install required module'
+          pip:
+            name:
+              - yq 
+            extra_args: --user
+            executable: pip3
+          when:
+            - yq_binary is defined
+            - yq_binary.rc is defined
+            - yq_binary.rc > 0 
+          register: yq_binary_install
+
+        - name: '{{ ansible_name_module }} | ansible.builtin.debug }} | Print yq_binary_install output' 
+          ansible.builtin.debug:
+            var: yq_binary_install 
+            verbosity: 2
+
+        #- name: '{{ ansible_name_module }} | command:which | Check if yq is installed'
+        #  ansible.builtin.shell: >
+        #    which yq 
+        #  ignore_errors: yes
+        #  when:
+        #    - yq_binary_install is defined
+        #    - yq_binary_install.changed is defined
+        #    - yq_binary_install.changed | bool 
+        #    - not yq_binary_install.skipped is defined or not yq_binary_install.skipped | bool 
+        #  register: yq_binary
+
+    - name: '{{ ansible_name_module }} | Process and Deploy RealmImport'
+      when:
+        - apply_realm_import is defined and apply_realm_import | bool
+        - sso_relamimport_json is defined and sso_relamimport_json != ''
+      block:
+        - name: '{{ ansible_name_module }} | stat | Check if realm import json file exist'
+          ansible.builtin.stat:
+            path: "{{ sso_relamimport_json }}"
+            get_checksum: false
+          register: sso_realmimport_jsonfile_exists
+
+        - name: '{{ ansible_name_module }} | assert | the raw realm import json file is defined'
+          ansible.builtin.assert:
+            that:
+              - sso_realmimport_jsonfile_exists is defined
+              - sso_realmimport_jsonfile_exists.stat is defined
+              - sso_realmimport_jsonfile_exists.stat.exists is defined
+              - sso_realmimport_jsonfile_exists.stat.exists | bool 
+              - sso_realmimport_jsonfile_exists.stat.isreg is defined
+              - sso_realmimport_jsonfile_exists.stat.isreg | bool 
+            msg: "The realm importjson  is required for Realm import yaml conversion"
+
+        - name: '{{ ansible_name_module }} | set_fact | RHBK AF URL env value'
+          ansible.builtin.set_fact:
+            rhbk_realm_import_cm: "realm-import"
+          when:
+            - apply_import_on_start is defined
+            - apply_import_on_start | bool 
+            - not rhbk_realm_import_cm is defined or rhbk_realm_import_cm == ''
+
+  tasks:
+    - name: '{{ ansible_name_module }} | Deploy Postgresql DB if needed'
+      when:
+        - deploy_pgsql is defined
+        - deploy_pgsql | bool
+      block:
+        - name: '{{ ansible_name_module }} | template | Render Postgresql Statefulset manifests '
+          ansible.builtin.template:
+            src: "templates/postgresql-statefulset.j2.yml"
+            dest: "{{ staging_dir | d('/tmp', true) }}/rhbk-postgresql-statefulset.yml"
+            force: yes
+          vars:
+          register: rhbk_pgsql_manifest_copied
+
+        - name: '{{ ansible_name_module }} | ansible.builtin.command:{{ openshift_cli }} apply | deploy Postgresql' 
+          ansible.builtin.command: >
+            {{ openshift_cli }} apply -f {{ staging_dir | d('/tmp', true) }}/rhbk-postgresql-statefulset.yml
+          when:
+            - rhbk_pgsql_manifest_copied is defined
+            - rhbk_pgsql_manifest_copied.dest is defined
+            - rhbk_pgsql_manifest_copied.state is defined
+            - "'file' in rhbk_pgsql_manifest_copied.state"
+          register: checluster_config_deployed
+
+         ### Create BCFKS trsutstore using a pem CA file or existing jks truststore 
+    - name: '{{ ansible_name_module }} | Create BCFKS if needed'
+      when:
+        - create_bcfks_keystore is defined
+        - create_bcfks_keystore | bool
+      block:
+        - name: '{{ ansible_name_module }} | file:directory | Ensure the certs staging directory exist'
+          ansible.builtin.file:
+            path: "/tmp/bcfks-keystore"
+            state: directory
+            mode: 0777
+
+        - name: '{{ ansible_name_module }} | assert | BCFKS password is defined'
+          ansible.builtin.assert:
+            that:
+              - bcks_password is defined
+              - bcks_password != ''
+            msg: "The BCFKS keystore password is required to create the BCFKS keystore."
+
+        - name: '{{ ansible_name_module }} | command:which | Check if podman is installed'
+          ansible.builtin.shell: >
+            which podman
+          ignore_errors: yes
+          register: podman_binary
+
+              ### This will take an existing jks keystore and convert it to bcfks format
+        - name: '{{ ansible_name_module }} | Perform convert workflow validation'
+          when:
+            - convert_jks is defined
+            - convert_jks | bool
+          block: 
+            - name: '{{ ansible_name_module }} | copy | Ensure the entrypoint file is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "files/bcfks-entrypoint.sh"
+                dest: "/tmp/bcfks-keystore/entrypoint.sh"
+                force: true
+                mode: u=rwx,g=rwx,o=rwx 
+
+            - name: '{{ ansible_name_module }} | stat | Check if JKS file exist'
+              ansible.builtin.stat:
+                path: "{{ jks_ks_file }}"
+                get_checksum: false
+              when:
+                - jks_ks_file is defined 
+                - jks_ks_file != '' 
+              register: jks_ks_file_exist
+
+            - name: '{{ ansible_name_module }} | assert | git host is defined'
+              ansible.builtin.assert:
+                that:
+                  - jks_ks_password is defined
+                  - jks_ks_password != ''
+                msg: "The JKS Keystore password is required to create the BCFKS keystore."
+
+            - name: '{{ ansible_name_module }} | copy | Ensure the keystore is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "{{ jks_ks_file }}"
+                dest: "/tmp/bcfks-keystore/{{ jks_ks_file | basename }}"
+                force: true
+                mode: u=rw,g=rw,o=rwx 
+
+            - name: '{{ ansible_name_module }} | command:podman | Run podman container to convert keystore'
+              ansible.builtin.command: >
+                 {{ podman_binary.stdout }} run -d --rm --name genks --entrypoint /entrypoint.sh \
+                  -e SRCSTOREPASS={{ jks_ks_password }} \
+                  -e DESTSTOREPASS={{ bcks_password }} \
+                  -e SRCSTOREFILE={{ (jks_ks_file | basename).split('.')[0] }} \
+                  -v /tmp/bcfks-keystore/entrypoint.sh:/entrypoint.sh \ 
+                  -v /tmp/bcfks-keystore:/certs:Z \
+                  -v /tmp/bcfks-keystore/{{ jks_ks_file | basename }}:/certs/{{ jks_ks_file | basename }} \
+                  {{ rhbk_ks_image | d('localhost/openshift4/rhbk/fips-rhbk-bcfkskeystore-rhel9', true) }}:{{ rhbk_ks_image_tag | d('latest', true) }}
+              register: bcfks_converted 
+
+        - name: '{{ ansible_name_module }} | Perform new keystore workflow validation'
+          when:
+            - generate_keystore is defined
+            - generate_keystore | bool
+          block: 
+            - name: '{{ ansible_name_module }} | stat | Check if rhbk_cert_file pem file exist'
+              ansible.builtin.stat:
+                path: "{{ rhbk_cert_file }}"
+                get_checksum: false
+              when:
+                - rhbk_cert_file is defined
+                - rhbk_cert_file != ''
+              register: rhbk_cert_file_exist
+
+            - name: '{{ ansible_name_module }} | stat | Check if rhbk_key_file pem file exist'
+              ansible.builtin.stat:
+                path: "{{ rhbk_key_file }}"
+                get_checksum: false
+              when:
+                - rhbk_key_file is defined
+                - rhbk_key_file != ''
+              register: rhbk_key_file_exist
+
+            - name: '{{ ansible_name_module }} | stat | Check if rhbk_intca_cert_file pem file exist'
+              ansible.builtin.stat:
+                path: "{{ rhbk_intca_cert_file }}"
+                get_checksum: false
+              when:
+                - rhbk_intca_cert_file is defined
+                - rhbk_intca_cert_file != ''
+              register: rhbk_intca_cert_file_exist
+
+            - name: '{{ ansible_name_module }} | set_fact | RHBK BCFKS keystore file value'
+              ansible.builtin.set_fact:
+                bcks_file: "/tmp/bcfks-keystore/keystore.bcfks"
+              when:
+                - not bcks_file is defined or bcks_file == ''
+
+            - name: '{{ ansible_name_module }} | copy | Ensure the entrypoint file is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "files/create-bcfks-entrypoint.sh"
+                dest: "/tmp/bcfks-keystore/create-bcfks-entrypoint.sh"
+                force: true
+                mode: u=rwx,g=rwx,o=rwx 
+
+            - name: '{{ ansible_name_module }} | copy | Ensure the cert file is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "{{ rhbk_cert_file }}"
+                dest: "/tmp/bcfks-keystore/{{ rhbk_cert_file | basename }}"
+                force: true
+                mode: u=rw,g=rw,o=rwx
+
+            - name: '{{ ansible_name_module }} | copy | Ensure the key file is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "{{ rhbk_key_file }}"
+                dest: "/tmp/bcfks-keystore/{{ rhbk_key_file | basename }}"
+                force: true
+                mode: u=rw,g=rw,o=rwx
+
+            - name: '{{ ansible_name_module }} | copy | Ensure the intermediate cert file is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "{{ rhbk_intca_cert_file }}"
+                dest: "/tmp/bcfks-keystore/{{ rhbk_intca_cert_file | basename }}"
+                force: true
+                mode: u=rw,g=rw,o=rwx
+
+            - name: '{{ ansible_name_module }} | command:podman | Run podman container to create BCFKS keystore'
+              ansible.builtin.command: >
+                 {{ podman_binary.stdout }} run -d --rm --name genks --entrypoint /entrypoint.sh \
+                  -e DESTSTOREPASS={{ bcks_password }} \
+                  -e DESTSTOREFILE={{ (bcks_file | basename).split('.')[0] }} \
+                  -e CERTFILE={{ (rhbk_cert_file | basename) }} \
+                  -e KEYFILE={{ (rhbk_key_file | basename) }} \
+                  -e INTCHAINCERTFILE={{ (rhbk_intca_cert_file | basename) }} \
+                  -v /tmp/bcfks-keystore/create-bcfks-entrypoint.sh:/entrypoint.sh \ 
+                  -v /tmp/bcfks-keystore:/certs:Z \
+                  -v /tmp/bcfks-keystore/{{ rhbk_cert_file | basename }}:/certs/{{ rhbk_cert_file | basename }} \
+                  -v /tmp/bcfks-keystore/{{ rhbk_key_file | basename }}:/certs/{{ rhbk_key_file | basename }} \
+                  -v /tmp/bcfks-keystore/{{ rhbk_intca_cert_file | basename }}:/certs/{{ rhbk_intca_cert_file | basename }} \
+                  {{ rhbk_ks_image | d('localhost/openshift4/rhbk/fips-rhbk-bcfkskeystore-rhel9', true) }}:{{ rhbk_ks_image_tag | d('latest', true) }}
+              register: bcfks_created 
+
+         ### Create BCFKS trsutstore using a pem CA file or existing jks truststore 
+    - name: '{{ ansible_name_module }} | Create BCFKS if needed'
+      when:
+        - create_bcfks_truststore is defined
+        - create_bcfks_truststore | bool
+      block:
+        - name: '{{ ansible_name_module }} | file:directory | Ensure the certs staging directory exist'
+          ansible.builtin.file:
+            path: "/tmp/bcfks-truststore"
+            state: directory
+            mode: 0777
+
+        - name: '{{ ansible_name_module }} | command:which | Check if podman is installed'
+          ansible.builtin.shell: >
+            which podman
+          ignore_errors: yes
+          register: podman_binary
+
+        - name: '{{ ansible_name_module }} | assert | BCFKS password is defined'
+          ansible.builtin.assert:
+            that:
+              - bcts_password is defined
+              - bcts_password != ''
+            msg: "The BCFKS Truststore password is required to create the BCFKS keystore."
+
+         ### This will take an existing jks truststore and convert it to bcfks format
+        - name: '{{ ansible_name_module }} | Perform convert workflow validation'
+          when:
+            - convert_jks is defined
+            - convert_jks | bool
+          block: 
+            - name: '{{ ansible_name_module }} | stat | Check if JKS file exist'
+              ansible.builtin.stat:
+                path: "{{ jks_ts_file }}"
+                get_checksum: false
+              when:
+                - jks_ts_file is defined
+                - jks_ts_file != ''
+              register: jks_ts_file_exist
+
+            - name: '{{ ansible_name_module }} | assert | JKS password is defined'
+              ansible.builtin.assert:
+                that:
+                  - jks_ts_password is defined
+                  - jks_ts_password != ''
+                msg: "The JKS Truststore password is required to create the BCFKS keystore."
+
+            - name: '{{ ansible_name_module }} | copy | Ensure the entrypoint file is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "files/bcfks-entrypoint.sh"
+                dest: "/tmp/bcfks-truststore/entrypoint.sh"
+                force: true
+                mode: u=rwx,g=rwx,o=rwx
+
+            - name: '{{ ansible_name_module }} | copy | Ensure the keystore is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "{{ jks_ts_file }}"
+                dest: "/tmp/bcfks-truststore/{{ jks_ts_file | basename }}"
+                force: true
+                mode: u=rw,g=rw,o=rwx
+
+            - name: '{{ ansible_name_module }} | command:podman | Run podman container to convert keystore'
+              ansible.builtin.command: >
+                 {{ podman_binary.stdout }} run --authfile {{ registry_authfile }} \
+                   -d --rm --name genks --entrypoint /entrypoint.sh \
+                   -e SRCSTOREPASS={{ jks_ts_password }} \
+                   -e DESTSTOREPASS={{  bcts_password }} \
+                   -e SRCSTOREFILE={{ (jks_ts_file | basename).split('.')[0] }} \
+                   -v /tmp/bcfks-truststore/entrypoint.sh:/entrypoint.sh:Z \
+                   -v /tmp/bcfks-truststore:/certs:Z \
+                   -v /tmp/bcfks-truststore/{{ jks_ts_file | basename }}:/certs/{{ jks_ts_file | basename }} \
+                  {{ rhbk_ks_image | d('localhost/openshift4/rhbk/fips-rhbk-bcfkskeystore-rhel9', true) }}:{{ rhbk_ks_image_tag | d('latest', true) }}
+              register: bcfts_converted
+
+        - name: '{{ ansible_name_module }} | Perform new truststore workflow validation'
+          when:
+            - generate_truststore is defined
+            - generate_truststore | bool
+          block: 
+            - name: '{{ ansible_name_module }} | stat | Check if CA pem file exist'
+              ansible.builtin.stat:
+                path: "{{ rhbk_ca_cert_file }}"
+                get_checksum: false
+              when:
+                - rhbk_ca_cert_file is defined
+                - rhbk_ca_cert_file != ''
+              register: rhbk_ca_cert_file_exist
+
+            - name: '{{ ansible_name_module }} | set_fact | RHBK BCFKS truststore file value'
+              ansible.builtin.set_fact:
+                bcts_file: "/tmp/bcfks-truststore/truststore.bcfks"
+              when:
+                - not bcts_file is defined or bcts_file == ''
+
+            - name: '{{ ansible_name_module }} | copy | Ensure the entrypoint file is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "files/create-bcfks-ts-entrypoint.sh"
+                dest: "/tmp/bcfks-truststore/create-bcfks-ts-entrypoint.sh"
+                force: true
+                mode: u=rwx,g=rwx,o=rwx 
+
+            - name: '{{ ansible_name_module }} | copy | Ensure the CA file is copied to the staging directory'
+              ansible.builtin.copy:
+                src: "{{ rhbk_ca_cert_file }}"
+                dest: "/tmp/bcfks-truststore/{{ rhbk_ca_cert_file | basename }}"
+                force: true
+                mode: u=rw,g=rw,o=rwx
+
+            - name: '{{ ansible_name_module }} | command:podman | Run podman container to create BCFKS keystore'
+              ansible.builtin.command: >
+                 {{ podman_binary.stdout }} run -d --rm --name genks --entrypoint /entrypoint.sh \
+                  -e DESTSTOREPASS={{ bcts_password }} \
+                  -e DESTSTOREFILE={{ (bcts_file | basename).split('.')[0] }} \
+                  -e CACHAINCERTFILE={{ (rhbk_ca_cert_file | basename) }} \
+                  -v /tmp/bcfks-truststore/create-bcfks-ts-entrypoint.sh:/entrypoint.sh \ 
+                  -v /tmp/bcfks-truststore:/certs:Z \
+                  -v /tmp/bcfks-truststore/{{ rhbk_ca_cert_file | basename }}:/certs/{{ rhbk_ca_cert_file | basename }} \
+                  {{ rhbk_ks_image | d('localhost/openshift4/rhbk/fips-rhbk-bcfkskeystore-rhel9', true) }}:{{ rhbk_ks_image_tag | d('latest', true) }}
+              register: bcfts_created 
+
+      ### This will take an existing BCFKS keystore and create a k8 secret for it
+    - name: '{{ ansible_name_module }} | Create BCFKS keystore secret if needed'
+      when:
+        - create_keystore_secret is defined
+        - create_keystore_secret | bool
+      block:
+        #- name: '{{ ansible_name_module }} | set_fact |  bcks_file '
+        #  ansible.builtin.set_fact:
+        #    bcks_file: "/tmp/bcfks-keystore/{{ (jks_ks_file | basename).split('.jks')[0] }}.bcfks"
+        #  when:
+        #    - not bcks_file is defined or (bcks_file is defined and bcks_file == '')
+
+        - name: '{{ ansible_name_module }} | stat | Check if bcks_file file exist'
+          ansible.builtin.stat:
+            path: "{{ bcks_file }}"
+            get_checksum: false
+          register: bcks_file_exists
+
+        - name: '{{ ansible_name_module }} | assert | BCKFS file is defined'
+          ansible.builtin.assert:
+            that:
+              - bcks_file_exists is defined
+              - bcks_file_exists.stat is defined
+              - bcks_file_exists.stat.exists is defined
+              - bcks_file_exists.stat.exists | bool 
+              - bcks_file_exists.stat.isreg is defined
+              - bcks_file_exists.stat.isreg | bool 
+            msg: "The BCFKS formatted keystore is required for the keystore secret creation"
+
+        - name: '{{ ansible_name_module }} | Get Existing RHBK KS secret'
+          ansible.builtin.command: >
+            {{ openshift_cli }} get secret {{ rhbk_ks_secret_name }} -n {{ rhbk_ns }}
+          ignore_errors: yes
+          register: rhbk_ks_secret_exist
+
+        - name: '{{ ansible_name_module }} | Delete Existing RHBK KS secret'
+          ansible.builtin.command: >
+            {{ openshift_cli }} delete secret {{ rhbk_ks_secret_name }} -n {{ rhbk_ns }}
+          ignore_errors: yes
+          when:
+            - rhbk_ks_secret_exist.rc is defined
+            - rhbk_ks_secret_exist.rc == 0
+          register: rhbk_ks_secret_exist
+
+        - name: '{{ ansible_name_module }} | create RHBK KS secret'
+          ansible.builtin.command: >
+            {{ openshift_cli }} create secret generic {{ rhbk_ks_secret_name }} \
+              --from-file=keystore={{ bcks_file }} -n {{ rhbk_ns }}
+          register: rhbk_ks_secret_created
+
+      ### This will take an existing truststore and create a k8 configmap for it
+    - name: '{{ ansible_name_module }} | Create BCFKS trustore configmap if needed'
+      when:
+        - create_truststore_cm is defined
+        - create_truststore_cm | bool
+      block:
+        - name: '{{ ansible_name_module }} | set_fact |  bcts_file '
+          ansible.builtin.set_fact:
+            bcts_file: "/tmp/bcfks-truststore/{{ (jks_ts_file | basename).split('.jks')[0] }}.bcfks"
+          when:
+            - not bcts_file is defined or (bcts_file is defined and bcts_file == '')
+
+        - name: '{{ ansible_name_module }} | stat | Check if bcts_file file exist'
+          ansible.builtin.stat:
+            path: "{{ bcts_file }}"
+            get_checksum: false
+          register: bcts_file_exists
+
+        - name: '{{ ansible_name_module }} | assert | BCKFS truststore file is defined'
+          ansible.builtin.assert:
+            that:
+              - bcts_file_exists is defined
+              - bcts_file_exists.stat is defined
+              - bcts_file_exists.stat.exists is defined
+              - bcts_file_exists.stat.exists | bool 
+              - bcts_file_exists.stat.isreg is defined
+              - bcts_file_exists.stat.isreg | bool 
+            msg: "The BCFKS formatted truststore is required for the truststore configmap creation"
+
+        - name: '{{ ansible_name_module }} | Get Existing RHBK TS CM'
+          ansible.builtin.command: >
+            {{ openshift_cli }} get cm {{ rhbk_ts_cm_name }} -n {{ rhbk_ns }}
+          ignore_errors: yes
+          register: rhbk_ts_cm_exist
+
+        - name: '{{ ansible_name_module }} | Delete Existing RHBK TS CM'
+          ansible.builtin.command: >
+            {{ openshift_cli }} delete cm {{ rhbk_ts_cm_name }} -n {{ rhbk_ns }}
+          ignore_errors: yes
+          when:
+            - rhbk_ts_cm_exist.rc is defined
+            - rhbk_ts_cm_exist.rc == 0
+          register: rhbk_ts_cm_exist
+
+        - name: '{{ ansible_name_module }} | create RHBK TS CM'
+          ansible.builtin.command: >
+            {{ openshift_cli }} create cm {{ rhbk_ts_cm_name }} \
+              --from-file={{ bcts_file | basename }}={{ bcts_file }} -n {{ rhbk_ns }}
+          register: rhbk_ts_cm_created
+
+      ### Configure and deploy keycoak instance 
+    - name: '{{ ansible_name_module }} | Validate required inputs'
+      when:
+        - deploy_sso_instance is defined and deploy_sso_instance | bool
+      block:
+        - name: '{{ ansible_name_module }} | assert | BCKFS keystore password is defined'
+          ansible.builtin.assert:
+            that:
+              - (bcks_password is defined and bcks_password != '') or ( jks_ks_password is defined and jks_ks_password != '')
+            msg: "The BCFKS keystore password or the JKS keystore password is required for the keycloak instance creation"
+
+        - name: '{{ ansible_name_module }} | set_fact |  bcts_password '
+          ansible.builtin.set_fact:
+            bcks_password: "{{ jks_ks_password }}"
+          when:
+            - not bcks_password is defined or (bcks_password is defined and bcks_password == '')
+            - jks_ks_password is defined and jks_ks_password != ''
+
+        - name: '{{ ansible_name_module }} | assert | BCKFS truststore password is defined'
+          ansible.builtin.assert:
+            that:
+              - (bcts_password is defined and bcts_password != '') or ( jks_ts_password is defined and jks_ts_password != '')
+            msg: "The BCFKS truststore password or the JKS truststore password is required for the keycloak instance creation"
+
+        - name: '{{ ansible_name_module }} | set_fact |  bcts_password '
+          ansible.builtin.set_fact:
+            bcts_password: "{{ jks_ts_password }}"
+          when:
+            - not bcts_password is defined or (bcts_password is defined and bcts_password == '')
+            - jks_ts_password is defined and jks_ts_password != ''
+
+        - name: '{{ ansible_name_module }} | assert | BCKFS keystore file is defined'
+          ansible.builtin.assert:
+            that:
+              - (bcks_file is defined and bcks_file != '') 
+            msg: "The BCFKS keystore file or the JKS keystore file is required for the keycloak instance creation"
+
+       # - name: '{{ ansible_name_module }} | set_fact |  bcts_password '
+       #   ansible.builtin.set_fact:
+       #     bcks_file: "{{ jks_ks_file }}"
+       #   when:
+       #     - not bcks_file is defined or (bcks_file is defined and bcks_file == '')
+       #     - jks_ks_file is defined and jks_ks_file != ''
+
+        - name: '{{ ansible_name_module }} | assert | BCKFS truststore file is defined'
+          ansible.builtin.assert:
+            that:
+              - (bcts_file is defined and bcts_file != '') 
+            msg: "The BCFKS truststore file or the JKS truststore file is required for the keycloak instance creation"
+
+        #- name: '{{ ansible_name_module }} | set_fact |  bcts_password '
+        #  ansible.builtin.set_fact:
+        #    bcts_file: "{{ jks_ts_file }}"
+        #  when:
+        #    - not bcts_password is defined or (bcts_password is defined and bcts_password == '')
+        #    - jks_ts_file is defined and jks_ts_file != ''
+
+        - name: '{{ ansible_name_module }} | Get default base domain'
+          ansible.builtin.command: >
+            {{ openshift_cli }} whoami --show-console name }} 
+          register: cluster_console_out 
+
+        - name: '{{ ansible_name_module }} | set_fact | route base domain '
+          ansible.builtin.set_fact:
+            route_base_domain: "{{  cluster_console_out.stdout.split('console-openshift-console')[1] }}"
+          when:
+            - cluster_console_out is defined
+            - cluster_console_out.rc is defined
+            - cluster_console_out.rc == 0
+            - cluster_console_out.stdout is defined
+            - cluster_console_out.stdout != '' 
+
+        - name: '{{ ansible_name_module }} | set_fact | RHBK hostname '
+          ansible.builtin.set_fact:
+            rhbk_hostname: "sso-{{ rhbk_ns }}{{ route_base_domain }}"
+          when:
+            - not rhbk_hostname is defined or rhbk_hostname == ''
+            - route_base_domain is defined and route_base_domain != ''
+
+        - name: '{{ ansible_name_module }} | set_fact | RHBK Admin URL '
+          ansible.builtin.set_fact:
+            rhbk_admin_url: "https://sso-{{ rhbk_ns }}{{ route_base_domain }}"
+          when:
+            - not rhbk_admin_url is defined or rhbk_admin_url == ''
+            - route_base_domain is defined and route_base_domain != ''
+
+        - name: '{{ ansible_name_module }} | set_fact | RHBK AF URL env value'
+          ansible.builtin.set_fact:
+            rhbk_af_url: "https://{{ repository_host_fqdn }}"
+          when:
+            - not rhbk_af_url is defined or rhbk_af_url == ''
+
+        - name: '{{ ansible_name_module }} | create RHBK realm import CM'
+          when:
+            - apply_realm_import is defined
+            - apply_realm_import | bool
+            - sso_relamimport_json is defined
+            - sso_relamimport_json != ''
+            - apply_import_on_start is defined
+            - apply_import_on_start | bool 
+          block:
+            - name: '{{ ansible_name_module }} | Get Existing RHBK  realm import CM'
+              ansible.builtin.command: >
+                {{ openshift_cli }} get cm {{ rhbk_realm_import_cm }} -n {{ rhbk_ns }}
+              ignore_errors: yes
+              register: rhbk_realm_cm_exist
+
+            - name: '{{ ansible_name_module }} | Delete Existing RHBK  realm import CM'
+              ansible.builtin.command: >
+                {{ openshift_cli }} delete cm {{ rhbk_realm_import_cm }} -n {{ rhbk_ns }}
+              ignore_errors: yes
+              when:
+                - rhbk_realm_cm_exist.rc is defined
+                - rhbk_realm_cm_exist.rc == 0
+              register: rhbk_realm_cm_deleted
+
+              #--from-file=realm.json={{ sso_relamimport_json }} -n {{ rhbk_ns }}
+            - name: '{{ ansible_name_module }} | create RHBK realm import CM'
+              ansible.builtin.command: >
+                {{ openshift_cli }} create cm {{ rhbk_realm_import_cm }} \
+                  --from-file={{ sso_relamimport_json | basename }}={{ sso_relamimport_json }} -n {{ rhbk_ns }}
+              register: rhbk_realm_cm_created
+
+        - name: '{{ ansible_name_module }} | template | Render RHBK SSO manifests '
+          ansible.builtin.template:
+            src: "templates/rhbk-keycloak.j2.yml"
+            dest: "{{ staging_dir | d('/tmp', true) }}/rhbk-keycloak.yml"
+            force: yes
+          vars:
+          register: rhbk_keycloak_manifest_copied
+
+        - name: '{{ ansible_name_module }} | ansible.builtin.command:{{ openshift_cli }} apply | deploy RHBK SSO instance' 
+          ansible.builtin.command: >
+            {{ openshift_cli }} apply -f {{ staging_dir | d('/tmp', true) }}/rhbk-keycloak.yml
+          when:
+            - rhbk_keycloak_manifest_copied is defined
+            - rhbk_keycloak_manifest_copied.dest is defined
+            - rhbk_keycloak_manifest_copied.state is defined
+            - "'file' in rhbk_keycloak_manifest_copied.state"
+          register: rhbk_keycloak_manifest_deployed
+
+      ### Configure and deploy keycoak Realm Import
+    - name: '{{ ansible_name_module }} | Process and Deploy RealmImport'
+      when:
+        - apply_realm_import is defined and apply_realm_import | bool
+      block:
+          ### This assumes that you have a raw sso realm import json file that you want to convert
+        - name: '{{ ansible_name_module }} | Convert raw RealmImport'
+          when:
+            - sso_relamimport_json is defined and sso_relamimport_json != ''
+          block:
+            - name: '{{ ansible_name_module }} | ansible.builtin.shell }} | create realmimport yaml file' 
+              ansible.builtin.shell: >
+                cat {{ sso_relamimport_json }} | {{ yq_binary.stdout }} -y \ 
+                > /tmp/{{ (sso_relamimport_json | basename).split('.json')[0] }}'.yaml' 
+              when:
+                - not apply_import_on_start is defined or not sso_relamimport_json | bool
+              register: realmimport_yamlfile_created
+                
+            - name: '{{ ansible_name_module }} | set_fact | RHBK AF URL env value'
+              ansible.builtin.set_fact:
+                sso_relamimport_yaml: "/tmp/{{ (sso_relamimport_json | basename).split('.json')[0] + '.yaml' }}"
+              when:
+                - not apply_import_on_start is defined or not sso_relamimport_json | bool
+                - realmimport_yamlfile_created is defined 
+                - realmimport_yamlfile_created.rc is defined 
+                - realmimport_yamlfile_created.rc == 0 
+
+        - name: '{{ ansible_name_module }} | Deploy RealmImport'
+          when:
+            - sso_relamimport_yaml is defined and sso_relamimport_yaml != ''
+          block:
+            - name: '{{ ansible_name_module }} | stat | Check if realm import yaml file exist'
+              ansible.builtin.stat:
+                path: "{{ sso_relamimport_yaml }}"
+                get_checksum: false
+              register: sso_realmimport_yamlfile_exists
+
+            - name: '{{ ansible_name_module }} | assert | yaml realm import file is defined'
+              ansible.builtin.assert:
+                that:
+                  - sso_realmimport_yamlfile_exists is defined
+                  - sso_realmimport_yamlfile_exists.stat is defined
+                  - sso_realmimport_yamlfile_exists.stat.exists is defined
+                  - sso_realmimport_yamlfile_exists.stat.exists | bool 
+                  - sso_realmimport_yamlfile_exists.stat.isreg is defined
+                  - sso_realmimport_yamlfile_exists.stat.isreg | bool 
+                msg: "The realm importyaml  is required for Realm import CR creation"
+
+            - name: '{{ ansible_name_module }} | template | Render RHBK Realm Import CR manifests '
+              ansible.builtin.template:
+                src: "templates/rhbk-realm-import-cr.j2.yml"
+                dest: "{{ staging_dir | d('/tmp', true) }}/rhbk-realm-import-cr.yml"
+                force: yes
+              vars:
+              register: rhbk_realmimport_manifest_copied
+
+            - name: '{{ ansible_name_module }} | ansible.builtin.command:{{ openshift_cli }} apply | deploy  Realm Import CR' 
+              ansible.builtin.command: >
+                {{ openshift_cli }} apply -f {{ staging_dir | d('/tmp', true) }}/rhbk-realm-import-cr.yml
+              when:
+                - rhbk_realmimport_manifest_copied is defined
+                - rhbk_realmimport_manifest_copied.dest is defined
+                - rhbk_realmimport_manifest_copied.state is defined
+                - "'file' in rhbk_realmimport_manifest_copied.state"
+              register: rhbk_realmimport_manifest_deployed
+

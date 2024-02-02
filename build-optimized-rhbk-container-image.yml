@@ -1,0 +1,155 @@
+#!/usr/local/bin/ansible-playbook --inventory=inventory
+- name: ' Build Optimized Image| build-optimized-rhbk-container-image.yml' 
+  hosts: localhost 
+  vars_files:
+    - 'vars/vault.yml'
+    - 'vars/rhbkbuild.yml'
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    module: "build-optinmized-rhbk-container-image"
+    ansible_name_module: " Build Optimized Image | {{ module }}"
+
+  pre_tasks:
+    - name: '{{ ansible_name_module }} | Ensure podman is installed on host'
+      shell: >
+        which podman
+      ignore_errors: yes
+      register: podman_binary
+
+    - assert:
+        that:
+          - podman_binary is defined
+          - podman_binary.rc is defined 
+          - podman_binary.rc == 0
+          - podman_binary.stdout is defined 
+        msg: "Podman is required on this host before running this "
+
+  tasks:
+    - name: '{{ ansible_name_module }} | Downlaod Clients if necessary'
+      when:
+        - download_extensions is defined
+        - download_extensions | bool
+        - extensions is defined 
+        - extensions.items is defined 
+        - extensions.items() | length > 0 
+      block:
+        - name: '{{ ansible_name_module }} | Set Client packages download destination'
+          set_fact:
+            extensions_dir: "{{ playbook_dir }}/context/_build/extensions"
+
+        - name: '{{ ansible_name_module }} | Ensure Client packages download destination exists'
+          file:
+            path: "{{ extensions_dir }}"
+            state: directory
+            mode: '0755'
+
+        - name: '{{ ansible_name_module }} | Download binaries'
+          get_url:
+            url: "{{ item.value.url }}{{ item.value.pkg_name }}-{{ item.value.pkg_version }}{{ item.value.pkg_suffix }}"
+            dest: "{{ extensions_dir }}/{{ item.value.pkg_name }}-{{ item.value.pkg_version }}{{ item.value.pkg_extention }}"
+          with_dict:
+            - "{{ extensions }}"
+
+    - name: '{{ ansible_name_module }} | Set Tomorrow Date fact'
+      set_fact:
+        today_date: "{{ lookup('pipe', ' date +%Y%m%d') }}"
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image name'
+      set_fact:
+        rhbk_image_name: "fips-keycloak-rhel9"
+      when:
+        - not rhbk_image_name is defined or rhbk_image_name == ''
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image Build Containerfile'
+      set_fact:
+        rhbk_image_containerfile: "{{ playbook_dir }}/context/Containerfile"
+      when:
+        - not rhbk_image_containerfile is defined or rhbk_image_containerfile == ''
+
+    - name: '{{ ansible_name_module }} | Set RHBK  keystore conversion Image Build Containerfile'
+      set_fact:
+        rhbk_ks_image_containerfile: "{{ playbook_dir }}/context/Containerfile.ks"
+      when:
+        - not rhbk_ks_image_containerfile is defined or rhbk_ks_image_containerfile == ''
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image Build context dir'
+      set_fact:
+        rhbk_image_build_context_dir: "{{ playbook_dir }}/context"
+      when:
+        - not rhbk_image_build_context_dir is defined or rhbk_image_build_context_dir == ''
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image Build base image arg'
+      set_fact:
+        rhbk_image_build_arg_base_image: "{{ ('--build-arg BASE_IMAGE=' + rhbk_image_build_arg_base_image_name + ' ') if rhbk_image_build_arg_base_image_name is defined and rhbk_image_build_arg_base_image_name != '' else '' }}"
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image Build base image label summary arg'
+      set_fact:
+        rhbk_image_build_arg_image_label_summary: "{{ ('--build-arg SUMMARY=' +  rhbk_image_build_arg_image_label_summary_value + ' ') if rhbk_image_build_arg_image_label_summary_value is defined and rhbk_image_build_arg_image_label_summary_value != '' else '' }}"
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image Build base image label name arg'
+      set_fact:
+        rhbk_image_build_arg_image_label_name: "{{ ('--build-arg  NAME=' + rhbk_image_build_arg_image_label_name_value + ' ') if  rhbk_image_build_arg_image_label_name_value is defined and  rhbk_image_build_arg_image_label_name_value != '' else '' }}"
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image Build base image label maintainer arg'
+      set_fact:
+        rhbk_image_build_arg_image_label_maintainer: "{{ ('--build-arg MAINTAINER=' + rhbk_image_build_arg_image_label_maintainer_value + ' ') if rhbk_image_build_arg_image_label_maintainer_value is defined and rhbk_image_build_arg_image_label_maintainer_value != '' else '' }}"
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image Build base image build arg'
+      set_fact:
+        rhbk_image_build_arg: "{{ rhbk_image_build_arg_base_image +  rhbk_image_build_arg_image_label_summary + rhbk_image_build_arg_image_label_name  + rhbk_image_build_arg_image_label_maintainer }}"
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image Build base image diable layer caching arg'
+      set_fact:
+        rhbk_image_build_arg_nocache: "{{ ('--no-cache ') if disable_layer_caching is defined and  disable_layer_caching | bool else '' }}"
+
+    - name: '{{ ansible_name_module }} | Set RHBK Image Build base image diable layer caching arg'
+      set_fact:
+        rhbk_image_build_arg_layersquash: "{{ ('--squash-all ') if squash_layers is defined and squash_layers | bool else '' }}"
+
+    - name: '{{ ansible_name_module }} | build RHBK container Image'
+      shell: >
+        podman build {{ rhbk_image_build_arg_nocache }} {{ rhbk_image_build_arg_layersquash }}         -f {{ rhbk_image_containerfile }} -t {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }} {{ rhbk_image_build_arg }} {{ rhbk_image_build_context_dir }}
+      register: rhbk_container_built
+
+    - name: '{{ ansible_name_module }} | tag RHBK container Image'
+      shell: >
+        podman tag {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }} {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest
+      register: rhbk_container_tagged
+
+    - name: '{{ ansible_name_module }} | push RHBK container Image'
+      shell: >
+        podman push --authfile {{ registry_auth_config }} {{ item }} 
+      loop:
+        - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }}"
+        - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest"
+      register: rhbk_container_pushed
+
+    - name: '{{ ansible_name_module }} | podman:save | save DPAAS RHBK image'
+      shell: >
+        podman save -o {{ dir_bundle_location }}/{{ rhbk_image_name }}-fips-latest-image-{{ today_date }}.tar \
+          {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }} 
+      register: rhbk_container_saved
+
+    - name: '{{ ansible_name_module }} | build RHBK BCFKS keystore conversion container Image'
+      shell: >
+        podman build {{ rhbk_image_build_arg_nocache }} {{ rhbk_image_build_arg_layersquash }} -f {{ rhbk_ks_image_containerfile }} -t {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }} {{ rhbk_image_build_arg }} {{ rhbk_image_build_context_dir }}
+      register: rhbk_ks_container_built
+
+    - name: '{{ ansible_name_module }} | tag RHBK  BCFKS keystore conversion  container Image'
+      shell: >
+        podman tag {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }} {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest
+      register: rhbk_ks_container_tagged
+
+    - name: '{{ ansible_name_module }} | push RHBK  BCFKS keystore conversion  container Image'
+      shell: >
+        podman push --authfile {{ registry_auth_config }} {{ item }} 
+      loop:
+        - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }}"
+        - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest"
+      register: rhbk_container_pushed
+
+    - name: '{{ ansible_name_module }} | podman:save | save DPAAS RHBK  BCFKS keystore conversion  image'
+      shell: >
+        podman save -o {{ dir_bundle_location }}/{{ rhbk_ks_image_name }}-fips-latest-image-{{ today_date }}.tar \
+          {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }} 
+      register: rhbk_ks_container_saved
