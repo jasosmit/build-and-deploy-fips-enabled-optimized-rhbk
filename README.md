@@ -1,4 +1,4 @@
-## RHBK Opetimized Container Image Build and deployment Automation
+## RHBK Optimized Container Image Build and deployment Automation
 
 The new release of Red Hat Build of Keycloak (RHBK) the new name for what was fomerly known as RHSSO has been simplified and above all support FIPS. 
 However, due to licensing incompatibilities, Red Hat was not able to include the required Bouncy Casttle FIPS crypto libraries into the container. Instead Red Hat recommends that anyone needing strict FIPS support to rebuild the provided container to add the required libraries (jars) to be downloaded from the (BouncyCastle website)[https://bouncycastle.org/fips-java/] and specifically (from) [https://downloads.bouncycastle.org/fips-java/].
