@@ -4,7 +4,7 @@ The new release of Red Hat Build of Keycloak (RHBK) the new name for what was fo
 However, due to licensing incompatibilities, Red Hat was not able to include the required Bouncy Casttle FIPS crypto libraries into the container. Instead Red Hat recommends that anyone needing strict FIPS support to rebuild the provided container to add the required libraries (jars) to be downloaded from the (BouncyCastle website)[https://bouncycastle.org/fips-java/] and specifically (from) [https://downloads.bouncycastle.org/fips-java/].
 
 Also the approach used with RHBK is to enable more immutability and therefore the way extensions were previously done no longer works. The recommended apporach is therefore to also build the provided image to include any extensions (e.g. custom themes, spi ...) to the image. 
-In order to achieve two goals with one stone we are building the image so that we can include both the BouncyCastle required libraries for FIPS as well as the custom themes/extension jars used to further customize the deployment of keycloak. 
+In order to achieve two goals with one stone we are building the image so that we can include both the Bouncy Castle required libraries for FIPS as well as the custom themes/extension jars used to further customize the deployment of keycloak. 
 
 Another change introduced with this new release is to no longer include the database deployment with the keycloak deployment. Rather it is rightly recommended that production grade database be used. 
 
