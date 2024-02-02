@@ -83,7 +83,7 @@ Finally before running the playbook make sure to set and update the variables as
 
 Plays and Role Variables
 ------------------------
-
+##### Optimized image build controlling variables
 - registry_host_fqdn: FQDN of the target registry to use
 - local_repository: the repository within the target registry 
 - openshift_cli: Openshift client binary used to interact with the cluster api (default to 'oc')
@@ -101,7 +101,7 @@ Plays and Role Variables
 - rhbk_image_build_arg_image_label_maintainer_value: image maintainer info
 - disable_layer_caching: to disable layer caching
 - squash_layers: if layer squashing is required for the image 
-### Client download controlling variables
+##### Client download controlling variables
 - download_extensions: false
 - extensions:
     bc-fips:
@@ -110,6 +110,7 @@ Plays and Role Variables
       pkg_name: name of the package
       pkg_suffix: suffix to append to the package name
       pkg_extention: package name extension
+##### Keycloak instance deployment controlling variables
 - rhbk_ns: namespace the keycloak instance and operators and being deployed into
 - registry_authfile: the authfile for the registry where the optimized keycloak instance is comes from
 - deploy_pgsql: whether to deploy a postgresql DB statefulset. Only used for testing
