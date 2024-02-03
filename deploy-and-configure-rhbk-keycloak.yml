@@ -699,6 +699,22 @@
           when:
             - sso_relamimport_yaml is defined and sso_relamimport_yaml != ''
           block:
+            ### wait for sso statefulset to be fully provisioned
+            - name: '{{ ansible_name_module }} | wait_for | wait for statefulset pods to be created'
+              wait_for:
+                timeout: 60
+              delegate_to: localhost
+
+            - name: '{{ ansible_name_module }} | ansible.builtin.shell:{{ openshift_cli }} get | check failed pods'
+              ansible.builtin.shell: >
+                {{ openshift_cli }} get po -l app=keycloak -n sso-rhbk --no-headers | awk '{print $3}' | grep -vi running | wc -l
+              register: rhbk_failed_instances
+
+            - name: '{{ ansible_name_module }} | ansible.builtin.debug| Print running sso instance output'
+              ansible.builtin.debug:
+                var: rhbk_failed_instances
+                verbosity: 2
+
             - name: '{{ ansible_name_module }} | stat | Check if realm import yaml file exist'
               ansible.builtin.stat:
                 path: "{{ sso_relamimport_yaml }}"
@@ -732,5 +748,8 @@
                 - rhbk_realmimport_manifest_copied.dest is defined
                 - rhbk_realmimport_manifest_copied.state is defined
                 - "'file' in rhbk_realmimport_manifest_copied.state"
+                - rhbk_failed_instances is defined
+                - rhbk_failed_instances.stdout is defined
+                - rhbk_failed_instances.stdout | int == 0
               register: rhbk_realmimport_manifest_deployed
 
