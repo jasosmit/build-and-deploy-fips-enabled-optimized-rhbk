@@ -7,7 +7,7 @@ metadata:
     app: sso
 spec:
   instances: {{ rhbk_instance_count | d('3', true) }}
-  image: {{ rhbk_image | d('docker.artifactory.code.dodiis.mil/openshift4/rhbk/fips-rhbk-keycloak-rhel9', true) }}:{{ rhbk_image_tag | d('latest', true) }}
+  image: {{ rhbk_image | d('localhost/openshift4/rhbk/fips-rhbk-keycloak-rhel9', true) }}:{{ rhbk_image_tag | d('latest', true) }}
   ingress:
     enabled: true
     className: openshift-default
