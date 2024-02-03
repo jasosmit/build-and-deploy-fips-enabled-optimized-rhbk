@@ -495,7 +495,7 @@
         - name: '{{ ansible_name_module }} | create RHBK KS secret'
           ansible.builtin.command: >
             {{ openshift_cli }} create secret generic {{ rhbk_ks_secret_name }} \
-              --from-file=keystore={{ bcks_file }} -n {{ rhbk_ns }}
+              --from-file={{ bcks_file | basename }}={{ bcks_file }} -n {{ rhbk_ns }}
           register: rhbk_ks_secret_created
 
       ### This will take an existing truststore and create a k8 configmap for it
@@ -663,8 +663,7 @@
                 - rhbk_realm_cm_exist.rc is defined
                 - rhbk_realm_cm_exist.rc == 0
               register: rhbk_realm_cm_deleted
-
-              #--from-file=realm.json={{ sso_relamimport_json }} -n {{ rhbk_ns }}
+              
             - name: '{{ ansible_name_module }} | create RHBK realm import CM'
               ansible.builtin.command: >
                 {{ openshift_cli }} create cm {{ rhbk_realm_import_cm }} \
