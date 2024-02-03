@@ -454,12 +454,6 @@
         - create_keystore_secret is defined
         - create_keystore_secret | bool
       block:
-        #- name: '{{ ansible_name_module }} | set_fact |  bcks_file '
-        #  ansible.builtin.set_fact:
-        #    bcks_file: "/tmp/bcfks-keystore/{{ (jks_ks_file | basename).split('.jks')[0] }}.bcfks"
-        #  when:
-        #    - not bcks_file is defined or (bcks_file is defined and bcks_file == '')
-
         - name: '{{ ansible_name_module }} | stat | Check if bcks_file file exist'
           ansible.builtin.stat:
             path: "{{ bcks_file }}"
@@ -585,25 +579,11 @@
               - (bcks_file is defined and bcks_file != '') 
             msg: "The BCFKS keystore file or the JKS keystore file is required for the keycloak instance creation"
 
-       # - name: '{{ ansible_name_module }} | set_fact |  bcts_password '
-       #   ansible.builtin.set_fact:
-       #     bcks_file: "{{ jks_ks_file }}"
-       #   when:
-       #     - not bcks_file is defined or (bcks_file is defined and bcks_file == '')
-       #     - jks_ks_file is defined and jks_ks_file != ''
-
         - name: '{{ ansible_name_module }} | assert | BCKFS truststore file is defined'
           ansible.builtin.assert:
             that:
               - (bcts_file is defined and bcts_file != '') 
             msg: "The BCFKS truststore file or the JKS truststore file is required for the keycloak instance creation"
-
-        #- name: '{{ ansible_name_module }} | set_fact |  bcts_password '
-        #  ansible.builtin.set_fact:
-        #    bcts_file: "{{ jks_ts_file }}"
-        #  when:
-        #    - not bcts_password is defined or (bcts_password is defined and bcts_password == '')
-        #    - jks_ts_file is defined and jks_ts_file != ''
 
         - name: '{{ ansible_name_module }} | Get default base domain'
           ansible.builtin.command: >
