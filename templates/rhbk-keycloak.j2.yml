@@ -78,7 +78,7 @@ spec:
                 value: >-
                   -Djavax.net.ssl.keyStore=/opt/keycloak/keystore/{{ bcks_file | basename }}
                   -Djavax.net.ssl.keyStorePassword={{ bcks_password }}
-                  -Djavax.net.ssl.keyStoreType={{ rhbk_ts_type | d('JKS', true) }}
+                  -Djavax.net.ssl.keyStoreType={{ rhbk_ks_type | d('JKS', true) }}
                   -Djavax.net.ssl.trustStore=/opt/keycloak/truststore/{{ bcts_file | basename }}
                   -Djavax.net.ssl.trustStorePassword={{ bcts_password }}
                   -Djavax.net.ssl.trustStoreType={{ rhbk_ts_type | d('JKS', true) }}
@@ -97,8 +97,8 @@ spec:
                   -Djavax.net.ssl.trustStoreType={{ rhbk_ts_type | d('JKS', true) }}
                   -Djava.security.properties=/usr/lib/jvm/jre-17-openjdk/conf/security/java.security
                   -Dauth.server.fips.mode=strict
-                  -Dauth.server.suported.keystore.type=BCFKS
-                  -Dauth.server.keystore.types=bcfks
+                  -Dauth.server.suported.keystore.type={{ rhbk_ks_type | d('JKS', true) }}
+                  -Dauth.server.keystore.types={{ rhbk_ks_type | d('JKS', true) }}
                   -Dauth.server.supported.rsa.key.sizes=2048,4096
                   -Djavax.net.ssl.keyStoreProvider=BCFIPS
                   -Djavax.net.ssl.trustStoreProvider=BCFIPS
@@ -149,6 +149,7 @@ spec:
             volumeMounts:
               - name: truststore-volume
                 mountPath: /opt/keycloak/truststore/{{ bcts_file | basename }}
+                subPath: {{ bcts_file | basename }}
               - name: keystore-volume
                 mountPath: /opt/keycloak/keystore
 {% if apply_realm_import is defined and apply_realm_import | bool and sso_relamimport_json is defined and sso_relamimport_json != '' and apply_import_on_start is defined and apply_import_on_start | bool %}
@@ -165,6 +166,6 @@ spec:
               secretName: {{ rhbk_ks_secret_name }}
 {% if apply_realm_import is defined and apply_realm_import | bool and sso_relamimport_json is defined and sso_relamimport_json != '' and apply_import_on_start is defined and apply_import_on_start | bool %}
           - name: realm-import-volume
-            configmap:
-              configmapName: {{ rhbk_realm_import_cm }}
+            configMap:
+              name: {{ rhbk_realm_import_cm }}
 {% endif %}
