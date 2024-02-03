@@ -54,20 +54,6 @@ RUN cp /tmp/files/*.jar /usr/lib/jvm/jre-17-openjdk/lib/
 RUN cat /usr/lib/jvm/jre-17-openjdk/conf/security/java.security | grep -v "#" | egrep "fips.|keystore"
 RUN fips-mode-setup --enable
 
-# Create BCFKS keystore
-RUN export KC_OPTS="-Djava.security.properties=/usr/lib/jvm/jre-17-openjdk/conf/security/java.security -Dcom.redhat.fips=true" && \
-    keytool -keystore /opt/keycloak/conf/server.keystore \
-    -storetype bcfks \
-    -providername BCFIPS \
-    -providerclass org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider \
-    -provider org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider \
-    -providerpath /opt/keycloak/providers/bc-fips-1.0.2.3.jar \
-    -alias localhost \
-    -ext  "SAN:c=DNS:localhost,IP:127.0.0.1" \
-    -genkeypair -sigalg SHA512withRSA -keyalg RSA -storepass passwordpassword \
-    -dname CN=localhost -keypass passwordpassword \
-    -J-Djava.security.properties=/tmp/kcadm.java.security
-
 RUN /opt/keycloak/bin/kc.sh build  --features=fips,docker,authorization,client-secret-rotation,impersonation,token-exchange,web-authn --fips-mode=strict
 
 
