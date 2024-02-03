@@ -32,7 +32,6 @@ ENV KC_FIPS_MODE=strict
 # Add custom java security file to override default  
 COPY _build/kcadm.java.security /tmp/kcadm.java.security
 COPY _build/java.security /usr/lib/jvm/jre-17-openjdk/conf/security/java.security 
-ADD  --chown=keycloak:keycloak _build/java.security  /opt/keycloak/conf 
 
 # Add Bouncy Castle 
 ADD --chown=keycloak:keycloak _build/extensions/*.jar /tmp/files/
@@ -50,8 +49,6 @@ RUN cp /tmp/files/*.jar /opt/keycloak/providers/
 # copy libraries to jre dir
 RUN cp /tmp/files/*.jar /usr/lib/jvm/jre-17-openjdk/lib/
 
-# debug statements
-RUN cat /usr/lib/jvm/jre-17-openjdk/conf/security/java.security | grep -v "#" | egrep "fips.|keystore"
 RUN fips-mode-setup --enable
 
 RUN /opt/keycloak/bin/kc.sh build  --features=fips,docker,authorization,client-secret-rotation,impersonation,token-exchange,web-authn --fips-mode=strict
