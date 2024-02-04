@@ -146,6 +146,9 @@
       loop:
         - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }}"
         - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest"
+      when:
+        - push_image_to_registry is defined
+        - push_image_to_registry | bool 
       register: rhbk_container_pushed
 
     - name: '{{ ansible_name_module }} | podman:save | save DPAAS RHBK  BCFKS keystore conversion  image'

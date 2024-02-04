@@ -12,9 +12,12 @@ rhbk_image_build_arg_image_label_name_value: ''
 rhbk_image_build_arg_image_label_maintainer_value: ''
 disable_layer_caching: 'false'
 squash_layers: 'false'
+dir_bundle_location: ''
+registry_auth_config: ''
+push_image_to_registry: 'true'
 
 ### Client download controlling variables
-download_extensions: false
+download_extensions: true
 extensions:
   bc-fips:
     url: 'https://downloads.bouncycastle.org/fips-java/'
