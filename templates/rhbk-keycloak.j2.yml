@@ -55,6 +55,34 @@ spec:
       value: json
     - name: metrics-enabled
       value: 'true'
+    - name: https-client-auth
+      value: required
+    - name: https-protocols
+      value: 'TLSv1.3,TLSv1.2'
+    - name: https-key-store-file
+      value: /opt/keycloak/keystore/{{ bcks_file | basename }}
+    - name: https-key-store-password
+      value: {{ bcks_password }}
+    - name: https-key-store-type
+      value: {{ rhbk_ks_type | d('JKS', true) }}
+    - name: https-trust-store-file
+      value: /opt/keycloak/truststore/{{ bcts_file | basename }}
+    - name: https-trust-store-password
+      value: {{ bcts_password }}
+    - name: https-trust-store-type
+      value: {{ rhbk_ts_type | d('JKS', true) }}
+    - name: spi-truststore-file-file
+      value: /opt/keycloak/truststore/{{ bcts_file | basename }}
+    - name: spi-truststore-file-password
+      value: {{ bcts_password }}
+    - name: spi-truststore-file-type
+      value: {{ rhbk_ts_type | d('JKS', true) }}
+    - name: spi-connections-http-client-default-client-key-password
+      value: {{ bcks_password }}
+    - name: spi-connections-http-client-default-client-keystore
+      value: /opt/keycloak/keystore/{{ bcks_file | basename }}
+    - name: spi-connections-http-client-default-client-keystore-password
+      value: {{ bcks_password }}
   features:
     enabled:
       - multi-site
@@ -72,32 +100,6 @@ spec:
       spec:
         containers:
           - env:
-              - name: KC_HTTPS_CLIENT_AUTH
-                value: required
-              - name: KC_HTTPS_PROTOCOLS 
-                value: 'TLSv1.3,TLSv1.2'
-              - name: KC_HTTPS_KEY_STORE_FILE 
-                value: /opt/keycloak/keystore/{{ bcks_file | basename }} 
-              - name: KC_HTTPS_KEY_STORE_PASSWORD
-                value: {{ bcks_password }}
-              - name: KC_HTTPS_KEY_STORE_TYPE
-                value: {{ rhbk_ks_type | d('JKS', true) }} 
-              - name: KC_HTTPS_TRUST_STORE_FILE
-                value: /opt/keycloak/truststore/{{ bcts_file | basename }}
-              - name: KC_HTTPS_TRUST_STORE_PASSWORD
-                value: {{ bcts_password }}
-              - name: KC_HTTPS_TRUST_STORE_TYPE
-                value: {{ rhbk_ts_type | d('JKS', true) }}
-              - name: KC_SPI_CONNECTIONS_HTTP_CLIENT_DEFAULT_CLIENT_KEYSTORE
-                value: /opt/keycloak/keystore/{{ bcks_file | basename }}
-              - name: KC_SPI_CONNECTIONS_HTTP_CLIENT_DEFAULT_CLIENT_KEYSTORE_PASSWORD
-                value: {{ bcks_password }}
-              - name: KC_SPI_TRUSTSTORE_FILE_FILE
-                value: /opt/keycloak/truststore/{{ bcts_file | basename }}
-              - name: KC_SPI_TRUSTSTORE_FILE_PASSWORD
-                value: {{ bcts_password }}
-              - name: KC_SPI_TRUSTSTORE_FILE_TYPE
-                value: {{ rhbk_ts_type | d('JKS', true) }}
               - name: KC_LOG_LEVEL
                 value: "DEBUG,org.keycloak.common.crypto:TRACE,org.keycloak.crypto:TRACE,org.bouncycastle:TRACE,javax.net.ssl:TRACE"
               - name: JAVA_OPTS_APPEND 
