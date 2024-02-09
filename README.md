@@ -84,6 +84,7 @@ Note that these steps are not requried if you performed a default partial export
 3.) Save the modified json file and use that as the value for the sso_relamimport_json variable when deploying the keycloak RHBK instance.
 
 
+
 Requirements
 ------------
 A running OpenShift 4 cluster with the rhbk-operator already deployed and with valid credentials provided through the variables described below.
