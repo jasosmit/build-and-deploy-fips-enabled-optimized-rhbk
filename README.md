@@ -63,6 +63,27 @@ ansible-playbook --ask-vault-pass -v deploy-and-configure-rhbk-keycloak.yml
 
 Note that before running any playbook always make sure you properly set the appropriate variables as well as any related vaulted items. 
 
+### RHBK Realm Import
+**Realm Export**
+Requirements for Realm Import
+Realm export by default will do a partial export (i.e. excludes groups and roles and existing clients)(see two sample screenshoots below depending on your version of keycloak).
+![](images/rhbk-export-partial.png)
+![](images/keycloak-export-partial.png)
+
+If you need to export groups and roles as well as existing clients, make sure to click on the two buttons (Export groups and roles and Export clients) on the Partial Export page (two sample screenshoots below depending on your version of keycloak)
+
+![](images/rhbk-export-full.png)
+![](images/keycloak-export-full.png)
+
+We will refer to this export as a full export in the instructions below.
+
+During the RHBK creation there is an option to provide a raw realm export file so that the newly provisioned RHBK will have the realm imported. In order for this to work there a a few steps required to cleanup the full export file to make it ready for import.
+Note that these steps are not requried if you performed a default partial export.
+1.) Locate the secret code for each exported client and replace it with its equivalent secret value from the original keycloak from which the export was conducted. You can located this on the client configuration page on the admin console. The value you are replacing are the `**********`.
+2.) Locate the `authorizationSettings` nodes defined for each client and remove the entire node from the file. This structure is usually located under the optionalClientScopes node within the file.
+3.) Save the modified json file and use that as the value for the sso_relamimport_json variable when deploying the keycloak RHBK instance.
+
+
 Requirements
 ------------
 A running OpenShift 4 cluster with the rhbk-operator already deployed and with valid credentials provided through the variables described below.
