@@ -79,9 +79,9 @@ We will refer to this export as a full export in the instructions below.
 
 During the RHBK creation there is an option to provide a raw realm export file so that the newly provisioned RHBK will have the realm imported. In order for this to work there a a few steps required to cleanup the full export file to make it ready for import.
 Note that these steps are not requried if you performed a default partial export.
-1.) Locate the secret code for each exported client and replace it with its equivalent secret value from the original keycloak from which the export was conducted. You can located this on the client configuration page on the admin console. The value you are replacing are the `**********`.
-2.) Locate the `authorizationSettings` nodes defined for each client and remove the entire node from the file. This structure is usually located under the optionalClientScopes node within the file.
-3.) Save the modified json file and use that as the value for the sso_relamimport_json variable when deploying the keycloak RHBK instance.
+1. Locate the secret code for each exported client and replace it with its equivalent secret value from the original keycloak from which the export was conducted. You can located this on the client configuration page on the admin console. The value you are replacing are the `**********`.
+2.  Locate the `authorizationSettings` nodes defined for each client and remove the entire node from the file. This structure is usually located under the optionalClientScopes node within the file.
+3.  Save the modified json file and use that as the value for the sso_relamimport_json variable when deploying the keycloak RHBK instance.
 
 
 
