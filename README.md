@@ -170,10 +170,12 @@ Plays and Role Variables
 - rhbk_admin_url: optional admin console URL for the keycloak instance. Default uses route for the app
 - config_custom_theme: if custom theme is to be added along with related environment variables
 - custom_theme_env: structure for custom theme environment variables
+  ```
   - name: name of the environment variable
     value: value of the environment variable 
   - name: name of the environment variable
-    value: value of the environment variable 
+    value: value of the environment variable
+  ``` 
 - deploy_sso_instance: if we want to deploy the keycloak instance
 - rhbk_instance_count: number of keycloak instance replica
 - sso_relamimport_yaml: path to the yaml formated realm import if one is being applied
