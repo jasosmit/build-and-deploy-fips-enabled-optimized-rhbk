@@ -126,12 +126,14 @@ Plays and Role Variables
 ##### Client download controlling variables
 - download_extensions: false
 - extensions:
+  ```
     bc-fips:
       url: URL to download jar from Bouncy Castle website (e.g. 'https://downloads.bouncycastle.org/fips-java/')
       pkg_version: version of the package to download
       pkg_name: name of the package
       pkg_suffix: suffix to append to the package name
       pkg_extention: package name extension
+  ```
 ##### Keycloak instance deployment controlling variables
 - rhbk_ns: namespace the keycloak instance and operators and being deployed into
 - registry_authfile: the authfile for the registry where the optimized keycloak instance is comes from
