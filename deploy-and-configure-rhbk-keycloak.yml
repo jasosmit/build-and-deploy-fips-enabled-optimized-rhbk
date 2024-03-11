@@ -8,7 +8,7 @@
   vars_files:
     - 'vars/vault.yml'
     - 'vars/rhbk.yml'
-
+    - 'vars/ocp-vars.yml'
   pre_tasks:
     - name: '{{ ansible_name_module }} | {{ openshift_cli }} whoami | check if there is valid session'
       ansible.builtin.command: >
@@ -33,10 +33,8 @@
       register: rhbk_sub_ns
 
     - name: '{{ ansible_name_module }} | ansible.builtin.shell:{{ openshift_cli }} get | get RHBK namespace'
-      ansible.builtin.shell: >
-        {{ openshift_cli }} get project {{ rhbk_ns }} --no-headers | awk '{print $1}' 
-      ignore_errors: true
-      register: rhbk_ns
+      ansible.builtin.set_fact:
+            rhbk_ns: '{{ rhbk_ns }}'
 
     - name: '{{ ansible_name_module }} | assert | Devspace is properly installed'
       ansible.builtin.assert:
@@ -305,12 +303,12 @@
                 force: true
                 mode: u=rw,g=rw,o=rwx
 
-            - name: '{{ ansible_name_module }} | copy | Ensure the intermediate cert file is copied to the staging directory'
-              ansible.builtin.copy:
-                src: "{{ rhbk_intca_cert_file }}"
-                dest: "/tmp/bcfks-keystore/{{ rhbk_intca_cert_file | basename }}"
-                force: true
-                mode: u=rw,g=rw,o=rwx
+            # - name: '{{ ansible_name_module }} | copy | Ensure the intermediate cert file is copied to the staging directory'
+            #   ansible.builtin.copy:
+            #     src: "{{ rhbk_intca_cert_file }}"
+            #     dest: "/tmp/bcfks-keystore/{{ rhbk_intca_cert_file | basename }}"
+            #     force: true
+            #     mode: u=rw,g=rw,o=rwx
 
             - name: '{{ ansible_name_module }} | command:podman | Run podman container to create BCFKS keystore'
               ansible.builtin.command: >
@@ -319,12 +317,10 @@
                   -e DESTSTOREFILE={{ (bcks_file | basename).split('.')[0] }} \
                   -e CERTFILE={{ (rhbk_cert_file | basename) }} \
                   -e KEYFILE={{ (rhbk_key_file | basename) }} \
-                  -e INTCHAINCERTFILE={{ (rhbk_intca_cert_file | basename) }} \
                   -v /tmp/bcfks-keystore/create-bcfks-entrypoint.sh:/entrypoint.sh \ 
                   -v /tmp/bcfks-keystore:/certs:Z \
                   -v /tmp/bcfks-keystore/{{ rhbk_cert_file | basename }}:/certs/{{ rhbk_cert_file | basename }} \
                   -v /tmp/bcfks-keystore/{{ rhbk_key_file | basename }}:/certs/{{ rhbk_key_file | basename }} \
-                  -v /tmp/bcfks-keystore/{{ rhbk_intca_cert_file | basename }}:/certs/{{ rhbk_intca_cert_file | basename }} \
                   {{ rhbk_ks_image | d('localhost/openshift4/rhbk/fips-rhbk-bcfkskeystore-rhel9', true) }}:{{ rhbk_ks_image_tag | d('latest', true) }}
               register: bcfks_created 
 
@@ -523,13 +519,13 @@
 
         - name: '{{ ansible_name_module }} | Get Existing RHBK TS CM'
           ansible.builtin.command: >
-            {{ openshift_cli }} get cm {{ rhbk_ts_cm_name }} -n {{ rhbk_ns }}
+            {{ openshift_cli }} get cm {{ rhbk_ts_cm_name }} -n rhbk
           ignore_errors: yes
           register: rhbk_ts_cm_exist
 
         - name: '{{ ansible_name_module }} | Delete Existing RHBK TS CM'
           ansible.builtin.command: >
-            {{ openshift_cli }} delete cm {{ rhbk_ts_cm_name }} -n {{ rhbk_ns }}
+            {{ openshift_cli }} delete cm {{ rhbk_ts_cm_name }} -n rhbk
           ignore_errors: yes
           when:
             - rhbk_ts_cm_exist.rc is defined
@@ -539,7 +535,7 @@
         - name: '{{ ansible_name_module }} | create RHBK TS CM'
           ansible.builtin.command: >
             {{ openshift_cli }} create cm {{ rhbk_ts_cm_name }} \
-              --from-file={{ bcts_file | basename }}={{ bcts_file }} -n {{ rhbk_ns }}
+              --from-file={{ bcts_file | basename }}={{ bcts_file }} -n rhbk 
           register: rhbk_ts_cm_created
 
       ### Configure and deploy keycoak instance 
@@ -706,13 +702,13 @@
               delegate_to: localhost
 
             - name: '{{ ansible_name_module }} | ansible.builtin.shell:{{ openshift_cli }} get | check failed pods'
-              ansible.builtin.shell: >
-                {{ openshift_cli }} get po -l app=keycloak -n sso-rhbk --no-headers | awk '{print $3}' | grep -vi running | wc -l
-              register: rhbk_failed_instances
+              ansible.builtin.shell: >
+                {{ openshift_cli }} get po -l app=keycloak -n sso-rhbk --no-headers | awk '{print $3}' | grep -vi running | wc -l
+              register: rhbk_failed_instances
 
-            - name: '{{ ansible_name_module }} | ansible.builtin.debug| Print running sso instance output'
-              ansible.builtin.debug:
-                var: rhbk_failed_instances
+            - name: '{{ ansible_name_module }} | ansible.builtin.debug| Print running sso instance output'
+              ansible.builtin.debug:
+                var: rhbk_failed_instances
                 verbosity: 2
 
             - name: '{{ ansible_name_module }} | stat | Check if realm import yaml file exist'
@@ -749,7 +745,7 @@
                 - rhbk_realmimport_manifest_copied.state is defined
                 - "'file' in rhbk_realmimport_manifest_copied.state"
                 - rhbk_failed_instances is defined
-                - rhbk_failed_instances.stdout is defined
-                - rhbk_failed_instances.stdout | int == 0
+                - rhbk_failed_instances.stdout is defined
+                - rhbk_failed_instances.stdout | int == 0
               register: rhbk_realmimport_manifest_deployed
 
