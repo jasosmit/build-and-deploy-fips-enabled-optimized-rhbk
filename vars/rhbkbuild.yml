@@ -1,6 +1,6 @@
 ---
 ### Image build optional variables
-registry_host_fqdn: 'localhost'
+registry_host_fqdn: 'default-route-openshift-image-registry.apps.homelab-ocp.srv.homelab'
 local_repository: 'openshift4'
 rhbk_image_name: 'fips-rhbk-keycloak-rhel9'
 rhbk_ks_image_name: 'fips-rhbk-bcfkskeystore-rhel9'
@@ -12,9 +12,10 @@ rhbk_image_build_arg_image_label_name_value: ''
 rhbk_image_build_arg_image_label_maintainer_value: ''
 disable_layer_caching: 'false'
 squash_layers: 'false'
-dir_bundle_location: ''
-registry_auth_config: ''
+dir_bundle_location: '/tmp'
+registry_auth_config: '/run/user/1000/containers/auth.json'
 push_image_to_registry: 'true'
+tls_verify: 'false'
 
 ### Client download controlling variables
 download_extensions: true

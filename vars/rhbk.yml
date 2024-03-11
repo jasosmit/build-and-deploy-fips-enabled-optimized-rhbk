@@ -1,43 +1,45 @@
 ---
-rhbk_ns: ''    ### namespace the keycloak instance and operators and being deployed into
-registry_authfile: '' ##the authfile for the registry where the optimized keycloaj instance is comes from
+rhbk_ns: 'rhbk'    ### namespace the keycloak instance and operators and being deployed into
+registry_authfile: '/run/user/1000/containers/auth.json' ##the authfile for the registry where the optimized keycloaj instance is comes from
 deploy_pgsql: 'false' ## whether to deploy a postgresql DB statefulset. Only used for testing
 rhbk_db_secret_name: 'keycloakdb' ## name of the secret holding postgresql credentials
-rhbk_db_svc_name: 'postgres-db'  ## service name for the keycloak DB if deployed as a service
+rhbk_db_svc_name: ''  ## service name for the keycloak DB if deployed as a service
 rhbk_db_port: '5432'  ## postgresql DB port
-rhbk_db_password: 'R3dh4Tr3dh4tUTnvm' ## postgresql DB password
+rhbk_db_password: 'keycloak123' ## postgresql DB password
 rhbk_db_username: 'keycloak'  ## username of the postgresql DB 
-rhbk_db_pvc_name: 'postgres-db' ## name of the pvc for thepostgresql DB 
-rhbk_db_pvc_size: '1Gi' ## size of the pvc for hte postgresql DB
+rhbk_db_pvc_name: '' ## name of the pvc for thepostgresql DB 
+rhbk_db_pvc_size: '' ## size of the pvc for hte postgresql DB
 create_bcfks_keystore: 'false' ## weather to create a BCFKS keystore
 jks_ks_file: '' ## JKS keystore file if one is to be converted into BCFKS
 jks_ks_password: '' ## JKS keystore password if one is being converted to BCFKS
-rhbk_image: 'localhost/openshift4/rhbk/fips-rhbk-keycloak-rhel9' ## RHBK optimized image being used to deploy the keycoak instance 
+rhbk_image: 'image-registry.openshift-image-registry.svc:5000/rhbk/fips-rhbk-keycloak-rhel9' ## RHBK optimized image being used to deploy the keycoak instance 
 rhbk_image_tag: 'latest' ## RHBK optimized image tag
-rhbk_ks_image: 'localhost/openshift4/rhbk/fips-rhbk-bcfkskeystore-rhel9' ## image used to generate or convert JKS keystore into BCFKS
+rhbk_ks_image: 'default-route-openshift-image-registry.apps.homelab-ocp.srv.homelab/rhbk/fips-rhbk-bcfkskeystore-rhel9' ## image used to generate or convert JKS keystore into BCFKS
 rhbk_ks_image_tag: 'latest' ## tag for the image used to generate BCFKS keystore
-create_bcfks_truststore: 'false' ## whether we want to generate a BCFKS truststore
+create_bcfks_truststore: 'true' ## whether we want to generate a BCFKS truststore
 jks_ts_file: '' ## JKS truststore file if one is to be converted into BCFKS
 jks_ts_password: '' ## JKS truststore password if one is being converted to BCFKS
-create_keystore_secret: 'false' ## wether to create a secret for the keystore being used
-bcks_file: ''  ## BCFKS keystore file path
-bcks_password: '' ## BCFKS keystore password. At least 14 characters required
+create_keystore_secret: 'true' ## wether to create a secret for the keystore being used
+bcks_password: 'passwordpassword' ## BCFKS keystore password. At least 14 characters required
+  #bcks_file: 'files/server.keystore'  ## BCFKS keystore file path
+bcks_file: 'files/keystore.bcfks'  ## BCFKS keystore file path
 rhbk_ks_secret_name: 'keycloak-keystore' ## name to use for the keystore secret
-rhbk_db_host_name: '' ## hostname or IP or service name of the postgresql DB to use to connect to the DB
-create_truststore_cm: 'false' ## wether we want to create the truststire configmap or not
+rhbk_db_host_name: '192.168.3.149' ## hostname or IP or service name of the postgresql DB to use to connect to the DB
+create_truststore_cm: 'true' ## wether we want to create the truststire configmap or not
 rhbk_ts_cm_name: 'cacerts-truststore' ## name of the truststore configmap
-bcts_file: '' ##  BCFKS truststore file path
-bcts_password: '' ##  BCFKS truststore password. At least 14 characters required
+bcts_file: 'files/truststore.bcfks' ##  BCFKS truststore file path
+bcts_password: 'passwordpassword' ##  BCFKS truststore password. At least 14 characters required
 rhbk_ks_type: 'BCFKS' ## type of the keystore. for strict FIPS BCFKS is required but can be JKS or PKCS12
 rhbk_ts_type: 'BCFKS' ##  type of the keystore. for strict FIPS BCFKS is required but can be JKS or PKCS12
-rhbk_hostname: '' ## optional hostname for the keycloak instance. Default uses route for the app
+rhbk_hostname: 'rhbk-fips' ## optional hostname for the keycloak instance. Default uses route for the app
 rhbk_admin_url: '' ## optional admin console URL for the keycloak instance. Default uses route for the app
 config_custom_theme: 'true' ## if custom theme is to be added along with related environment variables
-custom_theme_env: ## structure for custom theme environment variables
-- name: 
-  value: 
-- name: 
-  value: 
+route_base_domain: 'apps.homelab-ocp.srv.homelab' ## Route base domain 
+  #custom_theme_env: ## structure for custom theme environment variables
+  #- name: 
+  #value: 
+  #- name: 
+  #value: 
 deploy_sso_instance: 'true' ## if we want to deploy the keycloak instance
 rhbk_instance_count: '3'  ## number of keycloak instance replica
 sso_relamimport_yaml: '' ## path to the yaml formated realm import if one is being applied
@@ -48,11 +50,12 @@ rhbk_realm_import_cm: '' ## realm import configmap if used during startup
 rhbk_db_pool_initial_size: '30' ## postgresql DB initial pool size
 rhbk_db_pool_min_size: '30' ## postgresql DB min pool size
 rhbk_db_pool_max_size: '30' ## postgresql DB max pool size
-rhbk_cert_file: '' ## pem formatted cert for the RHBK instance if creating BCFKS keystore from that
-rhbk_key_file: '' ## pem formatted key for the RHBK instance if creating BCFKS keystore from that
-rhbk_intca_cert_file: '' ## pem formatted intermediate cert for the RHBK instance if creating BCFKS keystore from that
-rhbk_ca_cert_file: '' ## pem formatted CA cert for the RHBK instance if creating BCFKS truststore from that
+rhbk_cert_file: 'files/rhbk-apps-ocp-homelab.crt' ## pem formatted cert for the RHBK instance if creating BCFKS keystore from that
+rhbk_key_file: 'files/rhbk-apps-ocp-homelab.key' ## pem formatted key for the RHBK instance if creating BCFKS keystore from that
+rhbk_intca_cert_file: 'files/ca.crt' ## pem formatted intermediate cert for the RHBK instance if creating BCFKS keystore from that
+rhbk_ca_cert_file: 'files/ca.crt' ## pem formatted CA cert for the RHBK instance if creating BCFKS truststore from that
 generate_truststore: 'true' ## if we are generating the BCFKS truststore from scratch
-generate_keystore: 'true' ## if we are generating the BCFKS keystore from scratch
+generate_keystore: 'false' ## if we are generating the BCFKS keystore from scratch
 convert_jks: 'false' ## if we are converting a JKS keystore/truststore  to a BCFKS keystore/truststore
-realm_name: '' ## name of the realm being imported
+realm_name: 'ocp' ## name of the realm being imported
+repository_host_fqdn: 'rhbk-fips.apps.homelab-ocp.srv.homelab'

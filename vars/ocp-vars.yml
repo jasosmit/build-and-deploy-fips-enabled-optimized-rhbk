@@ -1,0 +1,9 @@
+---
+# vars file for ocp-cluster-login
+
+ocp_cluster_kubeconfig: '/home/jason/.kube/config'
+ocp_cluster_user: 'kubeadmin'
+ocp_cluster_user_password: 'cluster-password'
+openshift_cli: '/home/jason/bin/oc'
+ocp_cluster_console_url: 'api.homelab-ocp.srv.homelab'
+
