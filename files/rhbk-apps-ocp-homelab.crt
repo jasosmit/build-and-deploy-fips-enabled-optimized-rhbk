@@ -1,0 +1,77 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            fd:a4:38:13:00:3b:25:8a:17:d6:a5:54:6a:67:08:5c
+        Signature Algorithm: ecdsa-with-SHA512
+        Issuer: CN=Easy-RSA CA
+        Validity
+            Not Before: Feb 21 14:28:04 2024 GMT
+            Not After : May 26 14:28:04 2026 GMT
+        Subject: C=US, ST=OK, L=Harrah, O=Homelab, OU=srv, CN=rhbk.apps.homelab-ocp.srv.homelab
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:bf:24:9d:6a:55:94:76:d3:fb:c9:c2:7d:de:c7:
+                    0b:0b:72:f4:26:cd:71:dc:2c:8b:bd:45:e5:69:23:
+                    0a:84:fd:12:e2:3b:45:ef:eb:fd:04:05:b6:61:09:
+                    16:cc:c2:8c:24:c4:34:10:0d:82:90:d1:c8:46:5b:
+                    dd:94:1a:9d:49:da:15:d5:6a:0a:26:a3:8a:8d:cd:
+                    69:e9:ef:b7:ff:66:3d:35:91:62:47:80:77:e8:98:
+                    ad:71:1f:28:a2:b8:73:95:8b:b8:d8:17:bf:f0:f3:
+                    3f:01:48:31:fc:46:af:2b:26:4b:fd:e6:ae:6b:06:
+                    51:1c:d6:25:0d:c7:bb:da:55:97:67:19:de:8d:f1:
+                    c3:e6:1e:6b:01:e8:bc:79:59:9b:ae:5c:5b:74:0d:
+                    f8:6a:56:11:ed:00:80:f8:99:4e:35:fc:40:85:3a:
+                    fa:9c:24:1c:85:35:c7:75:7a:18:da:49:68:df:60:
+                    d0:d0:ad:ac:e5:6c:b2:19:b0:f6:7d:8b:cf:5a:82:
+                    2d:dc:b6:75:ef:89:39:7c:03:a5:c7:ce:8f:8a:30:
+                    bf:d1:64:c2:e6:59:83:11:e0:43:f8:99:b8:52:e6:
+                    7c:d5:37:35:e0:40:98:59:0b:91:aa:28:1f:d2:1c:
+                    36:91:9b:44:0c:f7:7f:20:12:cb:e9:eb:6e:25:5f:
+                    57:eb
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            X509v3 Subject Key Identifier: 
+                87:D6:97:F0:9E:3B:40:94:D3:DF:26:D7:F2:80:2D:F6:62:2D:58:1C
+            X509v3 Authority Key Identifier: 
+                keyid:9E:CD:8A:90:21:BA:84:85:A4:59:A3:C3:C1:DD:D8:F1:7F:7D:95:6A
+                DirName:/CN=Easy-RSA CA
+                serial:5E:1A:47:35:E8:1B:04:F3:61:88:88:3D:11:CA:9E:EA:A2:1D:5B:D0
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Key Usage: 
+                Digital Signature, Key Encipherment
+            X509v3 Subject Alternative Name: 
+                DNS:rhbk.apps.homelab-ocp.srv.homelab
+    Signature Algorithm: ecdsa-with-SHA512
+    Signature Value:
+        30:66:02:31:00:bd:21:de:4b:d5:2e:0c:39:f8:6c:3b:75:a2:
+        14:62:f9:6f:db:fb:ee:7a:f4:c4:84:c6:97:27:24:51:88:00:
+        8b:1d:91:ea:b9:eb:02:65:c7:04:8f:88:fa:d5:18:dd:3b:02:
+        31:00:a2:da:fd:08:0c:d5:8b:f0:62:16:e3:c8:0c:49:c2:b1:
+        d3:39:17:80:38:43:87:fa:7c:c9:ab:d9:8e:ea:79:61:6b:1b:
+        fe:53:1c:c7:b7:c6:10:c6:bd:f5:02:ce:30:49
+-----BEGIN CERTIFICATE-----
+MIIDSTCCAs6gAwIBAgIRAP2kOBMAOyWKF9alVGpnCFwwCgYIKoZIzj0EAwQwFjEU
+MBIGA1UEAwwLRWFzeS1SU0EgQ0EwHhcNMjQwMjIxMTQyODA0WhcNMjYwNTI2MTQy
+ODA0WjB3MQswCQYDVQQGEwJVUzELMAkGA1UECAwCT0sxDzANBgNVBAcMBkhhcnJh
+aDEQMA4GA1UECgwHSG9tZWxhYjEMMAoGA1UECwwDc3J2MSowKAYDVQQDDCFyaGJr
+LmFwcHMuaG9tZWxhYi1vY3Auc3J2LmhvbWVsYWIwggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQC/JJ1qVZR20/vJwn3exwsLcvQmzXHcLIu9ReVpIwqE/RLi
+O0Xv6/0EBbZhCRbMwowkxDQQDYKQ0chGW92UGp1J2hXVagomo4qNzWnp77f/Zj01
+kWJHgHfomK1xHyiiuHOVi7jYF7/w8z8BSDH8Rq8rJkv95q5rBlEc1iUNx7vaVZdn
+Gd6N8cPmHmsB6Lx5WZuuXFt0DfhqVhHtAID4mU41/ECFOvqcJByFNcd1ehjaSWjf
+YNDQrazlbLIZsPZ9i89agi3ctnXviTl8A6XHzo+KML/RZMLmWYMR4EP4mbhS5nzV
+NzXgQJhZC5GqKB/SHDaRm0QM938gEsvp624lX1frAgMBAAGjgdAwgc0wCQYDVR0T
+BAIwADAdBgNVHQ4EFgQUh9aX8J47QJTT3ybX8oAt9mItWBwwUQYDVR0jBEowSIAU
+ns2KkCG6hIWkWaPDwd3Y8X99lWqhGqQYMBYxFDASBgNVBAMMC0Vhc3ktUlNBIENB
+ghReGkc16BsE82GIiD0Ryp7qoh1b0DATBgNVHSUEDDAKBggrBgEFBQcDATALBgNV
+HQ8EBAMCBaAwLAYDVR0RBCUwI4Ihcmhiay5hcHBzLmhvbWVsYWItb2NwLnNydi5o
+b21lbGFiMAoGCCqGSM49BAMEA2kAMGYCMQC9Id5L1S4MOfhsO3WiFGL5b9v77nr0
+xITGlyckUYgAix2R6rnrAmXHBI+I+tUY3TsCMQCi2v0IDNWL8GIW48gMScKx0zkX
+gDhDh/p8yavZjup5YWsb/lMcx7fGEMa99QLOMEk=
+-----END CERTIFICATE-----
