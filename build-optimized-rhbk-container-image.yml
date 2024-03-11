@@ -108,44 +108,44 @@
 
     - name: '{{ ansible_name_module }} | build RHBK container Image'
       shell: >
-        podman build {{ rhbk_image_build_arg_nocache }} {{ rhbk_image_build_arg_layersquash }}         -f {{ rhbk_image_containerfile }} -t {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }} {{ rhbk_image_build_arg }} {{ rhbk_image_build_context_dir }}
+        podman build {{ rhbk_image_build_arg_nocache }} {{ rhbk_image_build_arg_layersquash }}         -f {{ rhbk_image_containerfile }} -t {{ registry_host_fqdn }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }} {{ rhbk_image_build_arg }} {{ rhbk_image_build_context_dir }}
       register: rhbk_container_built
 
     - name: '{{ ansible_name_module }} | tag RHBK container Image'
       shell: >
-        podman tag {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }} {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest
+        podman tag {{ registry_host_fqdn }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }} {{ registry_host_fqdn }}/rhbk/{{ rhbk_image_name }}:latest
       register: rhbk_container_tagged
 
     - name: '{{ ansible_name_module }} | push RHBK container Image'
       shell: >
-        podman push --authfile {{ registry_auth_config }} {{ item }} 
+        podman push --authfile {{ registry_auth_config }} --tls-verify={{ tls_verify }} {{ item }} 
       loop:
-        - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }}"
-        - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest"
+        - "{{ registry_host_fqdn }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }}"
+        - "{{ registry_host_fqdn }}/rhbk/{{ rhbk_image_name }}:latest"
       register: rhbk_container_pushed
 
     - name: '{{ ansible_name_module }} | podman:save | save DPAAS RHBK image'
       shell: >
         podman save -o {{ dir_bundle_location }}/{{ rhbk_image_name }}-fips-latest-image-{{ today_date }}.tar \
-          {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }} 
+          {{ registry_host_fqdn }}/rhbk/{{ rhbk_image_name }}:latest-{{ today_date }} 
       register: rhbk_container_saved
 
     - name: '{{ ansible_name_module }} | build RHBK BCFKS keystore conversion container Image'
       shell: >
-        podman build {{ rhbk_image_build_arg_nocache }} {{ rhbk_image_build_arg_layersquash }} -f {{ rhbk_ks_image_containerfile }} -t {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }} {{ rhbk_image_build_arg }} {{ rhbk_image_build_context_dir }}
+        podman build {{ rhbk_image_build_arg_nocache }} {{ rhbk_image_build_arg_layersquash }} -f {{ rhbk_ks_image_containerfile }} -t {{ registry_host_fqdn }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }} {{ rhbk_image_build_arg }} {{ rhbk_image_build_context_dir }}
       register: rhbk_ks_container_built
 
     - name: '{{ ansible_name_module }} | tag RHBK  BCFKS keystore conversion  container Image'
       shell: >
-        podman tag {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }} {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest
+        podman tag {{ registry_host_fqdn }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }} {{ registry_host_fqdn }}/rhbk/{{ rhbk_ks_image_name }}:latest
       register: rhbk_ks_container_tagged
 
     - name: '{{ ansible_name_module }} | push RHBK  BCFKS keystore conversion  container Image'
       shell: >
-        podman push --authfile {{ registry_auth_config }} {{ item }} 
+        podman push --authfile {{ registry_auth_config }} --tls-verify={{ tls_verify }} {{ item }} 
       loop:
-        - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }}"
-        - "{{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest"
+        - "{{ registry_host_fqdn }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }}"
+        - "{{ registry_host_fqdn }}/rhbk/{{ rhbk_ks_image_name }}:latest"
       when:
         - push_image_to_registry is defined
         - push_image_to_registry | bool 
@@ -154,5 +154,5 @@
     - name: '{{ ansible_name_module }} | podman:save | save DPAAS RHBK  BCFKS keystore conversion  image'
       shell: >
         podman save -o {{ dir_bundle_location }}/{{ rhbk_ks_image_name }}-fips-latest-image-{{ today_date }}.tar \
-          {{ registry_host_fqdn }}/{{ local_repository }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }} 
+          {{ registry_host_fqdn }}/rhbk/{{ rhbk_ks_image_name }}:latest-{{ today_date }} 
       register: rhbk_ks_container_saved
